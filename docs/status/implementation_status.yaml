@@ -1,9 +1,9 @@
-snapshot_date: "2026-04-04"
+snapshot_date: "2026-04-05"
 source_of_truth:
   primary: "docs/specs/MASTER_SPEC.md"
   secondary: "docs/specs/machine_spec.yaml"
 overall_status:
-  completeness_percent_estimate: 86
+  completeness_percent_estimate: 92
   release_ready: false
   end_to_end_pipeline_present: true
   oof_only_backtest_present: true
@@ -15,10 +15,10 @@ phase_status:
   data_layer: completed
   pit_and_universe: completed
   labels_and_features: completed
-  splits_and_models: mostly_completed
+  splits_and_models: completed
   portfolio_and_backtest: mostly_completed
-  capacity_robustness_regimes_decay: mostly_completed
-  reporting_and_hardening: partially_completed
+  capacity_robustness_regimes_decay: completed
+  reporting_and_hardening: mostly_completed
 layer_status:
   raw_data_layer: completed
   bronze_layer: completed
@@ -27,13 +27,13 @@ layer_status:
   feature_generation_layer: completed
   label_generation_layer: completed
   split_engine: completed
-  model_zoo: partially_completed
+  model_zoo: mostly_completed
   oof_prediction_layer: completed
   portfolio_construction_layer: mostly_completed
   execution_engine: completed
   cost_engine: completed
   capacity_engine: completed
-  evaluation_reporting_layer: mostly_completed
+  evaluation_reporting_layer: completed
   tracking_manifests_artifacts_layer: mostly_completed
   tests_layer: completed
 operational_commands:
@@ -71,22 +71,18 @@ acceptance_coverage:
   portfolio_execution: covered
   costs_capacity: covered
   evaluation_reporting: covered
-  release_hardening: mostly_covered
+  release_hardening: covered
 temporary_simplifications:
   - "Operational pipeline uses deterministic synthetic data until real vendor adapters are configured."
-  - "Advanced ranker models are not wired into the operational runtime path."
   - "Beta-neutralization uses heuristic projection instead of a constrained optimizer."
-  - "Mandatory figures are indexed in the report bundle, but not yet rendered as standalone visual artifacts."
 open_gaps:
   - "Подключить real vendor adapters и operational ingest path без synthetic bundle."
-  - "Подключить advanced rankers и расширенный tuning path в runtime."
   - "Заменить heuristic beta-neutralization на constrained optimizer."
-  - "Дорендерить mandatory figures как отдельные артефакты и завести их в release gates."
   - "Дожать release-hardening до полностью чистого reproducible bundle на чистом окружении."
 risk_level:
   time_semantics: low
   point_in_time_correctness: low
   data_contracts: low
   research_governance: medium
-  reporting_completeness: medium
+  reporting_completeness: low
   operational_data_path: high
