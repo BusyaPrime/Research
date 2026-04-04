@@ -22,6 +22,6 @@ def test_lego_progress_marks_known_tail_epics_as_not_fully_done(repo_root: Path)
     payload = yaml.safe_load((repo_root / "docs" / "status" / "lego_progress.yaml").read_text(encoding="utf-8"))
     status_by_epic = {item["epic_id"]: item["status"] for item in payload["epics"]}
     assert status_by_epic["E20"] == "partially_completed"
-    assert status_by_epic["E22"] == "mostly_completed"
-    assert status_by_epic["E25"] == "mostly_completed"
+    assert status_by_epic["E22"] == "completed"
+    assert status_by_epic["E25"] == "completed"
     assert status_by_epic["E26"] == "mostly_completed"

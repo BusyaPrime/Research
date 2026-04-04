@@ -2,21 +2,17 @@
 
 ## Риски, которые сейчас еще остаются
 
-### Real vendor path пока заменен deterministic synthetic bundle
+### Real vendor path пока заменен synthetic vendor stub
 
-Это не ломает архитектуру, но пока не доказывает, что operational ingest path уже готов к реальному поставщику данных, rate limits, schema drift и секретам.
+Это уже не stub на уровне CLI или artifact path: ingest-команды живые и сохраняют все нужные слои. Но источник пока синтетический, поэтому до проверки на реальном вендоре остаются rate limits, schema drift, секреты и операционный шум, который обычно и приходит без приглашения.
 
-### Beta-neutralization в портфельном слое пока эвристическая
+### Release-hardening еще не добит до состояния “бери и переноси”
 
-Сейчас стоит рабочая, но упрощенная проекция. Для жесткого research/release уровня нужен отдельный constrained optimizer.
+Figures уже рендерятся отдельными SVG-файлами, report bundle и section bundle сохраняются, manifests тоже на месте. Но clean-room прогон на совсем чистом окружении и финальная упаковка reproducible handoff еще требуют добивки.
 
-### Mandatory figures еще не рендерятся как полноценные файлы
+### Model zoo еще можно расширять
 
-Report bundle уже знает, какие figures обязательны, и индексирует их. Но визуальный слой пока честно помечен как `stub_not_generated`.
-
-### Advanced rankers не подключены в operational runtime
-
-Конфиги под них есть, но runtime path пока опирается на поддерживаемый baseline/model subset.
+Boosting path уже подключен, baseline и linear слой тоже едут честно. Оставшийся риск тут не в отсутствии advanced path, а в том, что zoo пока уже рабочий, но еще не такой широкий, как просится для долгой исследовательской жизни.
 
 ## Ограничения среды
 

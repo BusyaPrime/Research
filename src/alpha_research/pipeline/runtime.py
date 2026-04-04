@@ -766,8 +766,8 @@ def execute_operational_command(
         ],
         next_steps=[
             "Заменить synthetic provider stub на реальные vendor adapters и нормальный secrets flow.",
-            "Заменить heuristic beta-neutralization на constrained optimizer с жесткими portfolio constraints.",
-            "Дожать ingest-стадии до полностью operational vendor path без synthetic fallback.",
+            "Проверить operational ingest path против живого поставщика с rate limits и schema drift.",
+            "Дожать release-hardening до clean-room reproducible handoff без ручных оговорок.",
         ],
     )
     rendered_sections = render_report_sections(
@@ -778,8 +778,8 @@ def execute_operational_command(
         ],
         next_steps=[
             "Заменить synthetic provider stub на реальные vendor adapters и нормальный secrets flow.",
-            "Заменить heuristic beta-neutralization на constrained optimizer с жесткими portfolio constraints.",
-            "Дожать ingest-стадии до полностью operational vendor path без synthetic fallback.",
+            "Проверить operational ingest path против живого поставщика с rate limits и schema drift.",
+            "Дожать release-hardening до clean-room reproducible handoff без ручных оговорок.",
         ],
     )
     report_path = report_dir / "final_report.md"
@@ -827,8 +827,8 @@ def execute_operational_command(
             ],
             next_steps=[
                 "Заменить synthetic provider stub на реальные vendor adapters и нормальный secrets flow.",
-                "Заменить heuristic beta-neutralization на constrained optimizer с жесткими portfolio constraints.",
-                "Дожать ingest-стадии до полностью operational vendor path без synthetic fallback.",
+                "Проверить operational ingest path против живого поставщика с rate limits и schema drift.",
+                "Дожать release-hardening до clean-room reproducible handoff без ручных оговорок.",
             ],
         )
         report_html_path = report_dir / "final_report.html"

@@ -35,7 +35,7 @@
 
 ### Operational ingest path
 
-В runtime пока живет deterministic synthetic bundle. Архитектурно это нормальный adapter/stub, но до полного соответствия production-grade operational data path это не дотягивает.
+Ingest-команды уже operational и сохраняют raw payload, request manifests, bronze artifacts и reference layer как нормальный stage path. Но источник пока synthetic vendor stub. То есть контракт слоя уже честный, а вот доказательства работы против живого внешнего провайдера, rate limits, schema drift и secrets flow еще нет.
 
 ### Model zoo
 
@@ -43,7 +43,7 @@ Baseline, linear path и boosting-модели уже едут в operational ru
 
 ### Portfolio optimizer
 
-Портфельный слой рабочий, но beta-neutralization пока эвристическая. Это тот случай, когда “работает” ещё не равно “закрыто по spec”.
+Этот хвост закрыт. В портфельном слое теперь стоит constrained projection с affine-ограничениями и box bounds, а не старая эвристическая коррекция. Отдельные тесты на beta- и sector-neutralization тоже уже добавлены.
 
 ### Reporting figures
 
@@ -89,6 +89,6 @@ Baseline, linear path и boosting-модели уже едут в operational ru
 
 ## Вывод
 
-По текущей оценке проект находится примерно в зоне `91-93%` от полного целевого состояния по `MASTER_SPEC.md`.
+По текущей оценке проект находится примерно в зоне `94-95%` от полного целевого состояния по `MASTER_SPEC.md`.
 
-Это уже рабочая исследовательская платформа с честным сквозным контуром и нормальным report/review bundle, но еще не тот момент, когда можно без оговорок сказать “все требования spec добиты до конца”. До полного закрытия ТЗ осталось меньше, чем уже сделано, но оставшийся кусок по-прежнему сидит в самых капризных слоях: runtime adapters, portfolio optimizer и final release hardening.
+Это уже рабочая исследовательская платформа с честным сквозным контуром, operational ingest surface и нормальным report/review bundle, но еще не тот момент, когда можно без оговорок сказать “все требования spec добиты до конца”. До полного закрытия ТЗ осталось меньше, чем уже сделано, но оставшийся кусок по-прежнему сидит в самых капризных слоях: real vendor adapters, secrets/runtime operations и final release hardening.

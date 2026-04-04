@@ -77,9 +77,9 @@ epics:
     status: completed
   - epic_id: E22
     epic_name: Portfolio construction and constraints
-    status: mostly_completed
+    status: completed
     notes:
-      - "Основной контур собран, но beta-neutralization пока эвристическая."
+      - "Основной контур собран, включая constrained exposure optimizer для beta/sector neutrality."
   - epic_id: E23
     epic_name: Costs and execution simulation
     status: completed
@@ -90,9 +90,9 @@ epics:
       - "Capacity path есть, но visual/report polish еще не полностью добит."
   - epic_id: E25
     epic_name: Evaluation, robustness and reporting
-    status: mostly_completed
+    status: completed
     notes:
-      - "Report bundle, sections и HTML уже есть, figures пока не рендерятся отдельно."
+      - "Report bundle, sections, HTML, ablation и отдельные figure-артефакты уже в operational path."
   - epic_id: E26
     epic_name: Testing, CI and release readiness
     status: mostly_completed

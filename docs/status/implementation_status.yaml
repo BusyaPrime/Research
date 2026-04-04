@@ -3,7 +3,7 @@ source_of_truth:
   primary: "docs/specs/MASTER_SPEC.md"
   secondary: "docs/specs/machine_spec.yaml"
 overall_status:
-  completeness_percent_estimate: 92
+  completeness_percent_estimate: 94
   release_ready: false
   end_to_end_pipeline_present: true
   oof_only_backtest_present: true
@@ -37,9 +37,9 @@ layer_status:
   tracking_manifests_artifacts_layer: mostly_completed
   tests_layer: completed
 operational_commands:
-  ingest-market: stub
-  ingest-fundamentals: stub
-  ingest-corporate-actions: stub
+  ingest-market: operational
+  ingest-fundamentals: operational
+  ingest-corporate-actions: operational
   build-reference: operational
   build-silver: operational
   build-universe: operational
@@ -74,10 +74,8 @@ acceptance_coverage:
   release_hardening: covered
 temporary_simplifications:
   - "Operational pipeline uses deterministic synthetic data until real vendor adapters are configured."
-  - "Beta-neutralization uses heuristic projection instead of a constrained optimizer."
 open_gaps:
   - "Подключить real vendor adapters и operational ingest path без synthetic bundle."
-  - "Заменить heuristic beta-neutralization на constrained optimizer."
   - "Дожать release-hardening до полностью чистого reproducible bundle на чистом окружении."
 risk_level:
   time_semantics: low

@@ -56,4 +56,4 @@ def test_unknown_extra_field_warn_or_fail_by_policy(repo_copy: Path) -> None:
 def test_config_snapshot_preserves_all_files(repo_root: Path) -> None:
     snapshot = build_config_snapshot(repo_root / "configs")
     assert snapshot.config_hash
-    assert len(snapshot.entries) == 17
+    assert len(snapshot.entries) == 18
