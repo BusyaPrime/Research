@@ -123,27 +123,97 @@ def _allocate_side(
     return weights, rejected
 
 
-def _heuristic_beta_neutralize(frame: pd.DataFrame, weights: pd.Series, portfolio_config: PortfolioConfig) -> pd.Series:
-    if not portfolio_config.beta_neutralize or "beta_estimate" not in frame.columns:
+def _constraint_matrix(frame: pd.DataFrame, weights: pd.Series, portfolio_config: PortfolioConfig) -> tuple[np.ndarray, np.ndarray]:
+    active = frame.loc[frame["security_id"].isin(weights.index)].drop_duplicates("security_id").set_index("security_id").reindex(weights.index)
+    rows: list[np.ndarray] = []
+    targets: list[float] = []
+
+    rows.append(np.ones(len(weights), dtype="float64"))
+    targets.append(float(portfolio_config.net_target))
+
+    sign_vector = np.sign(weights.to_numpy(dtype="float64"))
+    rows.append(sign_vector.astype("float64"))
+    targets.append(float(portfolio_config.gross_exposure))
+
+    if portfolio_config.beta_neutralize and "beta_estimate" in active.columns:
+        beta = pd.to_numeric(active["beta_estimate"], errors="coerce").fillna(0.0).to_numpy(dtype="float64")
+        if np.abs(beta).sum() > 1e-12:
+            rows.append(beta)
+            targets.append(0.0)
+
+    if portfolio_config.sector_neutralize and "sector" in active.columns:
+        sector_series = active["sector"].astype("string")
+        for sector in sorted(sector_series.dropna().unique().tolist()):
+            mask = (sector_series == sector).to_numpy(dtype=bool)
+            if not mask.any():
+                continue
+            sector_weights = weights.to_numpy(dtype="float64")[mask]
+            if not (np.any(sector_weights > 0) and np.any(sector_weights < 0)):
+                continue
+            row = np.zeros(len(weights), dtype="float64")
+            row[mask] = 1.0
+            rows.append(row)
+            targets.append(0.0)
+    return np.vstack(rows), np.asarray(targets, dtype="float64")
+
+
+def _project_to_affine(point: np.ndarray, constraints: np.ndarray, targets: np.ndarray) -> np.ndarray:
+    if constraints.size == 0:
+        return point.copy()
+    gram = constraints @ constraints.T
+    correction = constraints.T @ np.linalg.pinv(gram) @ (constraints @ point - targets)
+    return point - correction
+
+
+def _project_with_bounds(
+    initial: np.ndarray,
+    lower: np.ndarray,
+    upper: np.ndarray,
+    constraints: np.ndarray,
+    targets: np.ndarray,
+    *,
+    tolerance: float = 1e-10,
+    max_iter: int = 2048,
+) -> np.ndarray:
+    solution = initial.copy()
+    affine_correction = np.zeros(len(initial), dtype="float64")
+    box_correction = np.zeros(len(initial), dtype="float64")
+    for _ in range(max_iter):
+        previous = solution.copy()
+        affine_projection = _project_to_affine(solution + affine_correction, constraints, targets)
+        affine_correction = solution + affine_correction - affine_projection
+        bounded_projection = np.clip(affine_projection + box_correction, lower, upper)
+        box_correction = affine_projection + box_correction - bounded_projection
+        solution = bounded_projection
+        residual = constraints @ solution - targets if constraints.size else np.zeros(1, dtype="float64")
+        if np.max(np.abs(solution - previous)) <= tolerance and np.max(np.abs(residual)) <= 1e-8:
+            break
+    return np.clip(solution, lower, upper)
+
+
+def _apply_constrained_exposure_optimizer(frame: pd.DataFrame, weights: pd.Series, portfolio_config: PortfolioConfig) -> pd.Series:
+    if weights.empty or (not portfolio_config.beta_neutralize and not portfolio_config.sector_neutralize):
         return weights
 
-    beta_frame = frame[["security_id", "beta_estimate"]].drop_duplicates().set_index("security_id")
-    beta = pd.to_numeric(beta_frame["beta_estimate"], errors="coerce").reindex(weights.index).fillna(0.0)
-    exposure = float((weights * beta).sum())
-    denom = float((beta.pow(2)).sum())
-    if denom <= 1e-12 or abs(exposure) <= 1e-10:
+    active_weights = weights.loc[weights.abs() > 1e-12].copy()
+    if active_weights.empty:
         return weights
 
-    # TEMPORARY SIMPLIFICATION: heuristic projection instead of constrained optimizer.
-    adjusted = weights - exposure * beta / denom
-    gross = adjusted.abs().sum()
-    if gross > 0:
-        adjusted *= portfolio_config.gross_exposure / gross
-    net = adjusted.sum()
-    if abs(net - portfolio_config.net_target) > 1e-10:
-        offset = (net - portfolio_config.net_target) / max(len(adjusted), 1)
-        adjusted -= offset
-    return adjusted.clip(lower=-portfolio_config.max_weight_per_name, upper=portfolio_config.max_weight_per_name)
+    sign_vector = np.sign(active_weights.to_numpy(dtype="float64"))
+    lower = np.where(sign_vector > 0, 0.0, -portfolio_config.max_weight_per_name)
+    upper = np.where(sign_vector > 0, portfolio_config.max_weight_per_name, 0.0)
+    constraints, targets = _constraint_matrix(frame, active_weights, portfolio_config)
+    optimized = _project_with_bounds(
+        active_weights.to_numpy(dtype="float64"),
+        lower=lower,
+        upper=upper,
+        constraints=constraints,
+        targets=targets,
+    )
+    adjusted = pd.Series(optimized, index=active_weights.index, dtype="float64")
+    full = weights.copy()
+    full.loc[adjusted.index] = adjusted
+    return full.where(full.abs() > 1e-12, 0.0)
 
 
 @dataclass(frozen=True)
@@ -188,7 +258,7 @@ def build_portfolio_targets(
     rejected_rows.extend(rejected_long)
     rejected_rows.extend(rejected_short)
 
-    weights = _heuristic_beta_neutralize(frame, weights, portfolio_config)
+    weights = _apply_constrained_exposure_optimizer(frame, weights, portfolio_config)
     weights = weights.where(weights.abs() > 1e-10, 0.0)
 
     target = frame[["date", "security_id", "score_rank", "sector", "beta_estimate", "adv20_usd_t", "liquidity_bucket", "borrow_status"]].drop_duplicates("security_id").copy()

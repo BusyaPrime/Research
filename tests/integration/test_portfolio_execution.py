@@ -103,3 +103,58 @@ def test_next_open_execution_simulator_records_fill_ratios() -> None:
     execution = simulate_execution(pd.Timestamp("2024-06-03"), target, previous, market, make_portfolio_config(max_participation_pct_adv=0.02), make_costs_config(), aum=1_000_000.0)
     assert "fill_ratio" in execution.executed_trades.columns
     assert execution.executed_trades["fill_ratio"].between(0, 1).all()
+
+
+def test_constrained_beta_neutralization_hits_near_zero_beta_exposure() -> None:
+    date = pd.Timestamp("2024-06-03")
+    signal = pd.DataFrame(
+        [
+            {"date": date, "security_id": "SEC_A", "raw_prediction": 4.0, "is_in_universe": True, "sector": "Tech", "beta_estimate": 0.7, "adv20_usd_t": 2_000_000.0, "liquidity_bucket": "high", "borrow_status": "medium"},
+            {"date": date, "security_id": "SEC_B", "raw_prediction": 3.0, "is_in_universe": True, "sector": "Finance", "beta_estimate": 0.9, "adv20_usd_t": 2_100_000.0, "liquidity_bucket": "high", "borrow_status": "medium"},
+            {"date": date, "security_id": "SEC_C", "raw_prediction": 2.0, "is_in_universe": True, "sector": "Tech", "beta_estimate": 0.6, "adv20_usd_t": 2_200_000.0, "liquidity_bucket": "high", "borrow_status": "medium"},
+            {"date": date, "security_id": "SEC_D", "raw_prediction": 1.0, "is_in_universe": True, "sector": "Finance", "beta_estimate": 1.4, "adv20_usd_t": 2_300_000.0, "liquidity_bucket": "high", "borrow_status": "medium"},
+        ]
+    )
+    config = make_portfolio_config(
+        beta_neutralize=True,
+        sector_neutralize=False,
+        long_quantile=0.5,
+        short_quantile=0.5,
+        max_weight_per_name=0.45,
+        max_sector_gross_exposure=1.0,
+        max_sector_net_exposure=1.0,
+        reject_unborrowable_shorts=False,
+    )
+    result = build_portfolio_targets(signal, config)
+    active = result.targets.loc[result.targets["target_weight"].abs() > 1e-12].copy()
+    beta_exposure = float((pd.to_numeric(active["beta_estimate"], errors="coerce") * active["target_weight"]).sum())
+    assert abs(beta_exposure) <= 1e-8
+    assert active.loc[active["target_weight"] > 0, "target_weight"].sum() == pytest.approx(0.5, abs=1e-8)
+    assert active.loc[active["target_weight"] < 0, "target_weight"].sum() == pytest.approx(-0.5, abs=1e-8)
+
+
+def test_sector_neutralization_zeroes_sector_net_when_longs_and_shorts_exist() -> None:
+    date = pd.Timestamp("2024-06-03")
+    signal = pd.DataFrame(
+        [
+            {"date": date, "security_id": "SEC_A", "raw_prediction": 4.0, "is_in_universe": True, "sector": "Tech", "beta_estimate": 0.8, "adv20_usd_t": 2_000_000.0, "liquidity_bucket": "high", "borrow_status": "medium"},
+            {"date": date, "security_id": "SEC_B", "raw_prediction": 3.0, "is_in_universe": True, "sector": "Finance", "beta_estimate": 0.9, "adv20_usd_t": 2_100_000.0, "liquidity_bucket": "high", "borrow_status": "medium"},
+            {"date": date, "security_id": "SEC_C", "raw_prediction": 2.0, "is_in_universe": True, "sector": "Tech", "beta_estimate": 1.1, "adv20_usd_t": 2_200_000.0, "liquidity_bucket": "high", "borrow_status": "medium"},
+            {"date": date, "security_id": "SEC_D", "raw_prediction": 1.0, "is_in_universe": True, "sector": "Finance", "beta_estimate": 1.2, "adv20_usd_t": 2_300_000.0, "liquidity_bucket": "high", "borrow_status": "medium"},
+        ]
+    )
+    config = make_portfolio_config(
+        beta_neutralize=False,
+        sector_neutralize=True,
+        long_quantile=0.5,
+        short_quantile=0.5,
+        max_weight_per_name=0.30,
+        max_sector_gross_exposure=1.0,
+        max_sector_net_exposure=1.0,
+        reject_unborrowable_shorts=False,
+    )
+    result = build_portfolio_targets(signal, config)
+    active = result.targets.loc[result.targets["target_weight"].abs() > 1e-12].copy()
+    sector_net = active.groupby("sector", dropna=False)["target_weight"].sum()
+    assert sector_net["Tech"] == pytest.approx(0.0, abs=1e-8)
+    assert sector_net["Finance"] == pytest.approx(0.0, abs=1e-8)
