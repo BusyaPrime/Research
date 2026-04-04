@@ -4,3 +4,60 @@ ingest:
   default_end_date: "2024-12-31"
   default_n_securities: 8
   page_size: 500
+release_smoke:
+  enabled: true
+  run_ingest_commands: true
+  start_date: "2023-05-01"
+  end_date: "2024-06-28"
+  n_securities: 4
+  experiment_key: exp_baseline_linear
+  max_model_trials: 2
+  cost_scenarios:
+    - base
+  universe:
+    eligible_security_types:
+      - common_stock
+    excluded_security_types:
+      - ETF
+      - ETN
+      - ADR
+      - preferred
+      - warrant
+      - unit
+      - OTC
+    allowed_exchanges:
+      - NYSE
+      - NASDAQ
+    min_price_usd: 1.0
+    min_adv20_usd: 250000.0
+    optional_min_market_cap_usd: null
+    min_feature_coverage_ratio: 0.1
+    min_data_quality_score: 0.7
+    liquidity_buckets:
+      high: top_30_percent_by_adv20
+      medium: middle_40_percent_by_adv20
+      low: bottom_30_percent_by_adv20
+    membership_refresh: daily
+    log_exclusion_reasons: true
+  splits:
+    train_years: 1
+    validation_months: 1
+    test_months: 1
+    step_months: 12
+    expanding_train: false
+    purge_days: 5
+    embargo_days: 5
+    nested_validation: true
+    min_train_observations: 10
+    persist_fold_artifacts: true
+  capacity:
+    aum_ladder_usd:
+      - 1000000.0
+    participation_limits:
+      relaxed: 0.02
+      base: 0.01
+      strict: 0.005
+      ultra_strict: 0.0025
+    report_metrics:
+      - net_sharpe
+      - fraction_trades_clipped

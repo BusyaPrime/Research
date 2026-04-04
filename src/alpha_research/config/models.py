@@ -250,8 +250,23 @@ class RuntimeIngestConfig(FrozenModel):
     page_size: int
 
 
+class RuntimeReleaseSmokeConfig(FrozenModel):
+    enabled: bool
+    run_ingest_commands: bool
+    start_date: str
+    end_date: str
+    n_securities: int
+    experiment_key: str
+    max_model_trials: int
+    cost_scenarios: list[str]
+    universe: UniverseConfig
+    splits: SplitsConfig
+    capacity: CapacityConfig
+
+
 class RuntimeConfig(FrozenModel):
     ingest: RuntimeIngestConfig
+    release_smoke: RuntimeReleaseSmokeConfig
 
 
 class ExperimentPreprocessingConfig(FrozenModel):
