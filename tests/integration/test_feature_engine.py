@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from functools import lru_cache
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -9,6 +11,7 @@ from alpha_research.features.registry import feature_names_by_family, load_featu
 from tests.helpers.research_data import build_feature_research_bundle
 
 
+@lru_cache(maxsize=8)
 def _build_result(interaction_cap: int = 25):
     bundle = build_feature_research_bundle()
     result = build_feature_panel(
