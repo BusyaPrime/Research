@@ -25,6 +25,7 @@
 - [machine_spec.yaml](/E:/projecttype/docs/specs/machine_spec.yaml)
 - [implementation_notes.md](/E:/projecttype/docs/implementation_notes.md)
 - [release_checklist.md](/E:/projecttype/docs/release_checklist.md)
+- [reproducible_local_runbook.md](/E:/projecttype/docs/runbooks/reproducible_local_runbook.md)
 
 Их задача простая:
 

@@ -15,7 +15,7 @@ def test_machine_readable_status_lists_operational_gaps_and_simplifications(repo
     payload = yaml.safe_load((repo_root / "docs" / "status" / "implementation_status.yaml").read_text(encoding="utf-8"))
     assert payload["overall_status"]["end_to_end_pipeline_present"] is True
     assert payload["overall_status"]["release_ready"] is False
-    assert payload["overall_status"]["completeness_percent_estimate"] == 94
+    assert payload["overall_status"]["completeness_percent_estimate"] == 95
     assert payload["operational_commands"]["run-full-pipeline"] == "operational"
     assert payload["operational_commands"]["ingest-market"] == "operational"
     assert payload["temporary_simplifications"]
@@ -27,5 +27,5 @@ def test_machine_readable_status_lists_operational_gaps_and_simplifications(repo
 
 def test_spec_gap_audit_explicitly_states_not_fully_done(repo_root: Path) -> None:
     content = (repo_root / "docs" / "status" / "spec_gap_audit.md").read_text(encoding="utf-8")
-    assert "примерно в зоне `94-95%`" in content
+    assert "примерно в зоне `95%`" in content
     assert "еще не тот момент" in content

@@ -73,6 +73,7 @@ python -m alpha_research config-validate
 python -m alpha_research bootstrap
 python -m alpha_research run-full-pipeline --dry-run
 python -m pytest
+python .\scripts\verify_release_bundle.py --root .
 ```
 
 Отдельные стадии тоже доступны через CLI. Полный список команд и ожидаемых артефактов описан в `docs/specs/machine_spec.yaml`.
@@ -83,6 +84,7 @@ python -m pytest
 - `tests/leakage` — проверки на протечки;
 - `tests/integration` — сквозные куски пайплайна;
 - `tests/acceptance/acceptance_tests.yaml` — quality gates из спецификации.
+- `python .\scripts\verify_release_bundle.py --root .` — машинная проверка release bundle и связанных артефактов.
 
 Если падает leakage-тест, это не «мелкая нестабильность», а красная лампа. Значит, где-то пайплайн знает о будущем больше, чем ему положено.
 
@@ -94,3 +96,5 @@ python -m pytest
 - Полный release-hardening еще допиливается: тут уже не про идею, а про то, чтобы все воспроизводилось без сюрпризов на чистом окружении и без ручных оговорок.
 
 Это не ломает архитектуру, но и делать вид, что работа полностью закончена, было бы странно.
+
+Для локального воспроизводимого прогона есть отдельный runbook: [reproducible_local_runbook.md](/E:/projecttype/docs/runbooks/reproducible_local_runbook.md).
