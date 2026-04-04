@@ -8,7 +8,7 @@ import pandas as pd
 
 from alpha_research.backtest.engine import run_backtest
 from alpha_research.capacity.engine import run_capacity_analysis
-from alpha_research.common.io import write_json, write_parquet
+from alpha_research.common.io import read_json, write_json, write_parquet
 from alpha_research.common.manifests import (
     PipelineRunManifest,
     ReportBundle,
@@ -22,6 +22,8 @@ from alpha_research.common.paths import RepositoryPaths
 from alpha_research.config.loader import LoadedConfigBundle
 from alpha_research.config.models import CapacityConfig, ExperimentConfig, SplitsConfig, UniverseConfig
 from alpha_research.dataset.assembly import build_gold_panel
+from alpha_research.evaluation.ablation import run_ablation_suite
+from alpha_research.evaluation.figures import render_mandatory_figures
 from alpha_research.evaluation.metrics import (
     build_decay_response_curve,
     compute_portfolio_metrics,
@@ -78,6 +80,8 @@ SUPPORTED_MODEL_NAMES = {
     "heuristic_blend_score",
     "ridge_regression",
     "lasso_regression",
+    "gradient_boosting_regressor",
+    "gradient_boosting_ranker",
 }
 
 
@@ -149,10 +153,18 @@ def _select_experiment(loaded: LoadedConfigBundle) -> tuple[ExperimentConfig, li
             f"до подключения advanced ranker adapters ({names})."
         )
     if supported:
-        for experiment in supported:
-            if experiment.model.name == "ridge_regression":
-                return experiment, notes
-        return supported[0], notes
+        priority = {
+            "gradient_boosting_ranker": 0,
+            "gradient_boosting_regressor": 1,
+            "ridge_regression": 2,
+            "lasso_regression": 3,
+            "heuristic_blend_score": 4,
+            "heuristic_momentum_score": 5,
+            "heuristic_reversal_score": 6,
+            "random_score": 7,
+        }
+        ordered = sorted(supported, key=lambda experiment: (priority.get(experiment.model.name, 999), experiment.experiment_name))
+        return ordered[0], notes
 
     fallback = ExperimentConfig(
         experiment_name="fallback_ridge_baseline",
@@ -200,14 +212,35 @@ def _resolve_feature_columns(feature_result: FeatureBuildResult, experiment: Exp
     return available
 
 
-def _build_model_specs(experiment: ExperimentConfig, seed: int) -> list[ModelRunSpec]:
+def _model_params_registry_path(paths: RepositoryPaths, model_name: str) -> Path:
+    return paths.artifacts_dir / "model_registry" / f"{model_name}_best_params.json"
+
+
+def _load_cached_model_params(paths: RepositoryPaths, model_name: str) -> dict[str, object]:
+    path = _model_params_registry_path(paths, model_name)
+    if not path.exists():
+        return {}
+    payload = read_json(path)
+    if not isinstance(payload, dict):
+        return {}
+    best_params = payload.get("best_params", {})
+    return best_params if isinstance(best_params, dict) else {}
+
+
+def _build_model_specs(experiment: ExperimentConfig, seed: int, paths: RepositoryPaths) -> list[ModelRunSpec]:
+    primary_params: dict[str, object] = {}
+    if experiment.model.use_best_previous_params:
+        primary_params = _load_cached_model_params(paths, experiment.model.name)
     primary = ModelRunSpec(
         name=experiment.model.name,
         alpha_grid=tuple(experiment.model.alpha_grid or ()),
+        n_trials=experiment.model.n_trials,
+        params=primary_params,
         seed=seed,
     )
     secondary = [
         ModelRunSpec(name="heuristic_blend_score", seed=seed),
+        ModelRunSpec(name="ridge_regression", alpha_grid=(0.1, 1.0, 10.0), seed=seed),
         ModelRunSpec(name="random_score", seed=seed),
     ]
     seen = set()
@@ -236,6 +269,32 @@ def _summary_lines_from_metrics(frame: pd.DataFrame, value_column: str = "value"
         value = row.get(value_column)
         rows.append(f"- {metric}: {value}")
     return rows
+
+
+def _ablation_summary_lines(frame: pd.DataFrame) -> list[str]:
+    rows: list[str] = []
+    if frame.empty:
+        return ["- ablation_rows: 0"]
+    for scenario_group, group in frame.groupby("scenario_group", sort=False):
+        best_rank_row = group.sort_values("rank_ic_mean", ascending=False, kind="stable").iloc[0]
+        best_sharpe_row = group.sort_values("net_sharpe", ascending=False, kind="stable").iloc[0]
+        rows.append(f"- {scenario_group}.rows: {len(group)}")
+        rows.append(f"- {scenario_group}.best_rank_ic: {best_rank_row['scenario_name']} => {best_rank_row['rank_ic_mean']}")
+        rows.append(f"- {scenario_group}.best_net_sharpe: {best_sharpe_row['scenario_name']} => {best_sharpe_row['net_sharpe']}")
+    return rows
+
+
+def _best_tuned_params(tuning_diagnostics: pd.DataFrame, model_name: str) -> dict[str, object]:
+    if tuning_diagnostics.empty:
+        return {}
+    frame = tuning_diagnostics.loc[tuning_diagnostics["model_name"] == model_name].copy()
+    if frame.empty:
+        return {}
+    candidate_columns = [column for column in ("n_estimators", "learning_rate", "max_bins", "min_leaf_size") if column in frame.columns]
+    if not candidate_columns:
+        return {}
+    best_row = frame.sort_values("validation_rank_ic_mean", ascending=False, kind="stable").iloc[0]
+    return {column: best_row[column] for column in candidate_columns}
 
 
 def _feature_catalog_summary(feature_columns: list[str], root: Path) -> str:
@@ -424,7 +483,7 @@ def execute_operational_command(
             format="parquet",
         )
     )
-    model_specs = _build_model_specs(experiment, loaded.bundle.project.default_random_seed)
+    model_specs = _build_model_specs(experiment, loaded.bundle.project.default_random_seed, paths)
     preprocessing_spec = _resolve_preprocessing_spec(loaded, experiment)
     oof = generate_oof_predictions(
         gold.panel,
@@ -448,10 +507,35 @@ def execute_operational_command(
     artifacts.append(
         _persist_json_artifact(paths.root, manifests_dir / "oof_manifest.json", "oof_manifest", oof.manifest)
     )
+    if not oof.tuning_diagnostics.empty:
+        for model_name, tuning_frame in oof.tuning_diagnostics.groupby("model_name", sort=False):
+            candidate_columns = [column for column in ("n_estimators", "learning_rate", "max_bins", "min_leaf_size") if column in tuning_frame.columns]
+            if not candidate_columns:
+                continue
+            ranked = tuning_frame.sort_values("validation_rank_ic_mean", ascending=False, kind="stable").reset_index(drop=True)
+            if ranked.empty:
+                continue
+            best_row = ranked.iloc[0]
+            best_params = {column: best_row[column] for column in candidate_columns}
+            registry_payload = {
+                "model_name": model_name,
+                "best_params": best_params,
+                "best_validation_rank_ic_mean": best_row.get("validation_rank_ic_mean"),
+                "updated_from_run_id": run_id,
+            }
+            registry_path = write_json(registry_payload, _model_params_registry_path(paths, str(model_name)))
+            artifacts.append(
+                StageArtifact(
+                    name=f"{model_name}_best_params",
+                    path=str(registry_path.relative_to(paths.root)),
+                    format="json",
+                )
+            )
 
     primary_model_name = model_specs[0].name
+    primary_predictions = oof.predictions.loc[oof.predictions["model_name"] == primary_model_name].copy()
     backtest = run_backtest(
-        oof.predictions,
+        primary_predictions,
         universe.snapshot,
         features.panel,
         bundle.silver_market,
@@ -487,7 +571,7 @@ def execute_operational_command(
     cost_sensitivity_rows: list[dict[str, object]] = []
     for scenario in active_cost_scenarios:
         scenario_backtest = run_backtest(
-            oof.predictions,
+            primary_predictions,
             universe.snapshot,
             features.panel,
             bundle.silver_market,
@@ -513,7 +597,7 @@ def execute_operational_command(
     )
 
     capacity = run_capacity_analysis(
-        oof.predictions,
+        primary_predictions,
         universe.snapshot,
         features.panel,
         bundle.silver_market,
@@ -551,7 +635,7 @@ def execute_operational_command(
     predictive_metrics = pd.DataFrame(predictive_by_model)
     portfolio_metrics = compute_portfolio_metrics(backtest.daily_state)
     regime_frame = _regime_frame(
-        oof.predictions.loc[oof.predictions["model_name"] == primary_model_name],
+        primary_predictions,
         gold.panel[["date", "security_id", experiment.label]],
         bundle.benchmark_market,
         experiment.label,
@@ -564,12 +648,38 @@ def execute_operational_command(
     )
     decay_curve = build_decay_response_curve(
         gold.panel.merge(
-            oof.predictions.loc[oof.predictions["model_name"] == primary_model_name, ["date", "security_id", "raw_prediction"]],
+            primary_predictions[["date", "security_id", "raw_prediction"]],
             on=["date", "security_id"],
             how="inner",
         ),
         prediction_column="raw_prediction",
         label_columns=[column for column in gold.panel.columns if column.startswith("label_excess_") and column.endswith("_oo")],
+    )
+    primary_model_spec = model_specs[0]
+    ablation_model_spec = ModelRunSpec(
+        name=primary_model_spec.name,
+        alpha_grid=primary_model_spec.alpha_grid,
+        n_trials=primary_model_spec.n_trials,
+        params=_best_tuned_params(oof.tuning_diagnostics, primary_model_name) or dict(primary_model_spec.params),
+        seed=primary_model_spec.seed,
+    )
+    ablation = run_ablation_suite(
+        panel=gold.panel,
+        folds=splits.folds,
+        model_spec=ablation_model_spec,
+        feature_columns=feature_columns,
+        label_column=experiment.label,
+        dataset_version=experiment.dataset_version,
+        config_hash=loaded.config_hash,
+        preprocessing_spec=preprocessing_spec,
+        universe_snapshot=universe.snapshot,
+        feature_panel=features.panel,
+        silver_market=bundle.silver_market,
+        portfolio_config=loaded.bundle.portfolio,
+        costs_config=loaded.bundle.costs,
+        calendar=bundle.calendar,
+        scenario=experiment.cost_scenario,
+        root=str(paths.root),
     )
     artifacts.append(
         _persist_frame(paths.root, diagnostics_dir / "predictive_metrics.parquet", "predictive_metrics", predictive_metrics)
@@ -583,6 +693,9 @@ def execute_operational_command(
     artifacts.append(
         _persist_frame(paths.root, diagnostics_dir / "decay_curve.parquet", "decay_curve", decay_curve)
     )
+    artifacts.append(
+        _persist_frame(paths.root, diagnostics_dir / "ablation_results.parquet", "ablation_results", ablation.results)
+    )
 
     model_comparison_rows = []
     for model_name, frame in predictive_metrics.groupby("model_name", sort=True):
@@ -594,7 +707,6 @@ def execute_operational_command(
             }
         )
     model_comparison = pd.DataFrame(model_comparison_rows)
-    notes.append("TEMPORARY SIMPLIFICATION: обязательные figures пока индексируются в report bundle, но не рендерятся как отдельные визуальные артефакты.")
     section_payloads = {
         "executive_summary": (
             f"Запуск `{run_id}` собрал датасет `{experiment.dataset_version}` на {len(gold.panel):,} строк, "
@@ -643,6 +755,7 @@ def execute_operational_command(
                 f"- rows: {len(decay_curve)}",
             ]
         ),
+        "ablation_analysis": "\n".join(_ablation_summary_lines(ablation.results)),
     }
     report_text = render_final_report(
         loaded.bundle.reporting,
@@ -650,12 +763,11 @@ def execute_operational_command(
         section_payloads=section_payloads,
         limitations=[
             *notes,
-            "Advanced tree/ranker models пока не подключены к operational path.",
         ],
         next_steps=[
             "Заменить synthetic provider stub на реальные vendor adapters и нормальный secrets flow.",
-            "Подключить advanced rankers к model registry и tuning path.",
-            "Выжечь оставшиеся TEMPORARY SIMPLIFICATION из release bundle.",
+            "Заменить heuristic beta-neutralization на constrained optimizer с жесткими portfolio constraints.",
+            "Дожать ingest-стадии до полностью operational vendor path без synthetic fallback.",
         ],
     )
     rendered_sections = render_report_sections(
@@ -663,12 +775,11 @@ def execute_operational_command(
         section_payloads=section_payloads,
         limitations=[
             *notes,
-            "Advanced tree/ranker models пока не подключены к operational path.",
         ],
         next_steps=[
             "Заменить synthetic provider stub на реальные vendor adapters и нормальный secrets flow.",
-            "Подключить advanced rankers к model registry и tuning path.",
-            "Выжечь оставшиеся TEMPORARY SIMPLIFICATION из release bundle.",
+            "Заменить heuristic beta-neutralization на constrained optimizer с жесткими portfolio constraints.",
+            "Дожать ingest-стадии до полностью operational vendor path без synthetic fallback.",
         ],
     )
     report_path = report_dir / "final_report.md"
@@ -713,12 +824,11 @@ def execute_operational_command(
             section_payloads=section_payloads,
             limitations=[
                 *notes,
-                "Advanced tree/ranker models пока не подключены к operational path.",
             ],
             next_steps=[
                 "Заменить synthetic provider stub на реальные vendor adapters и нормальный secrets flow.",
-                "Подключить advanced rankers к model registry и tuning path.",
-                "Выжечь оставшиеся TEMPORARY SIMPLIFICATION из release bundle.",
+                "Заменить heuristic beta-neutralization на constrained optimizer с жесткими portfolio constraints.",
+                "Дожать ingest-стадии до полностью operational vendor path без synthetic fallback.",
             ],
         )
         report_html_path = report_dir / "final_report.html"
@@ -731,14 +841,30 @@ def execute_operational_command(
         if fmt not in generated_formats:
             pending_formats.append(fmt)
 
+    rendered_figures = render_mandatory_figures(
+        report_dir / "figures",
+        requested_figures=list(loaded.bundle.reporting.mandatory_figures),
+        universe_snapshot=universe.snapshot,
+        feature_panel=features.panel,
+        predictions=primary_predictions,
+        labels=gold.panel[["date", "security_id", experiment.label]],
+        backtest_daily_state=backtest.daily_state,
+        capacity_results=capacity.results,
+        decay_curve=decay_curve,
+    )
     figure_artifacts = [
         ReportFigureArtifact(
-            figure_name=figure_name,
-            status="stub_not_generated",
-            notes=["Figure rendering is not yet wired to the operational runtime path."],
+            figure_name=figure.figure_name,
+            status="generated",
+            path=str(figure.path.relative_to(paths.root)),
+            notes=figure.notes,
         )
-        for figure_name in loaded.bundle.reporting.mandatory_figures
+        for figure in rendered_figures
     ]
+    for figure in figure_artifacts:
+        artifacts.append(
+            StageArtifact(name=f"figure::{figure.figure_name}", path=str(figure.path), format="svg")
+        )
     report_bundle = ReportBundle(
         project_name=loaded.bundle.project.project_name,
         report_path=str(report_path.relative_to(paths.root)),
@@ -799,6 +925,7 @@ def execute_operational_command(
             "primary_model_name": primary_model_name,
             "net_sharpe": portfolio_metrics.set_index("metric")["value"].to_dict().get("net_sharpe"),
             "max_drawdown": portfolio_metrics.set_index("metric")["value"].to_dict().get("max_drawdown"),
+            "ablation_rows": int(len(ablation.results)),
         },
         pending_outputs=pending_formats,
         temporary_simplifications=notes,

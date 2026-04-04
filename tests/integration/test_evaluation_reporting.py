@@ -74,15 +74,16 @@ def test_decay_suite_builds_response_curve_by_horizons() -> None:
 def test_final_report_generator_includes_all_mandatory_sections() -> None:
     reporting_config = ReportingConfig(
         formats=["markdown"],
-        include_sections=["executive_summary", "backtest_results", "capacity_analysis", "regime_analysis", "decay_analysis", "limitations", "next_steps"],
+        include_sections=["executive_summary", "backtest_results", "capacity_analysis", "regime_analysis", "decay_analysis", "ablation_analysis", "limitations", "next_steps"],
         mandatory_figures=["ic_over_time", "equity_curve_net", "capacity_curve"],
     )
-    report = render_final_report(reporting_config, project_name="Alpha Platform", section_payloads={"backtest_results": "Тело бэктеста."})
+    report = render_final_report(reporting_config, project_name="Alpha Platform", section_payloads={"backtest_results": "Тело бэктеста.", "ablation_analysis": "Тело ablation."})
     assert "## Итог по запуску" in report
     assert "## Результаты бэктеста" in report
     assert "## Анализ capacity" in report
     assert "## Анализ по режимам" in report
     assert "## Анализ затухания сигнала" in report
+    assert "## Ablation-анализ" in report
     assert "## Ограничения" in report
     assert "## Что делать дальше" in report
 

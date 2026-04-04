@@ -19,6 +19,7 @@ SECTION_TITLES = {
     "capacity_analysis": "Анализ capacity",
     "regime_analysis": "Анализ по режимам",
     "decay_analysis": "Анализ затухания сигнала",
+    "ablation_analysis": "Ablation-анализ",
     "limitations": "Ограничения",
     "next_steps": "Что делать дальше",
 }

@@ -15,6 +15,11 @@ from alpha_research.models.baselines import (
     RidgeRegressionModel,
     tune_linear_model_alpha,
 )
+from alpha_research.models.boosting import (
+    GradientBoostingRankerModel,
+    GradientBoostingRegressorModel,
+    tune_boosting_model,
+)
 from alpha_research.preprocessing.transforms import FoldSafePreprocessor, PreprocessingSpec
 from alpha_research.splits.engine import FoldDefinition
 
@@ -23,6 +28,8 @@ from alpha_research.splits.engine import FoldDefinition
 class ModelRunSpec:
     name: str
     alpha_grid: tuple[float, ...] = field(default_factory=tuple)
+    n_trials: int | None = None
+    params: dict[str, object] = field(default_factory=dict)
     seed: int = 42
 
 
@@ -47,6 +54,22 @@ def _instantiate_model(spec: ModelRunSpec):
         return RidgeRegressionModel(alpha=float(spec.alpha_grid[0] if spec.alpha_grid else 1.0))
     if spec.name == "lasso_regression":
         return LassoRegressionModel(alpha=float(spec.alpha_grid[0] if spec.alpha_grid else 1.0))
+    if spec.name == "gradient_boosting_regressor":
+        return GradientBoostingRegressorModel(
+            n_estimators=int(spec.params.get("n_estimators", 24)),
+            learning_rate=float(spec.params.get("learning_rate", 0.05)),
+            max_bins=int(spec.params.get("max_bins", 12)),
+            min_leaf_size=int(spec.params.get("min_leaf_size", 16)),
+            random_seed=spec.seed,
+        )
+    if spec.name == "gradient_boosting_ranker":
+        return GradientBoostingRankerModel(
+            n_estimators=int(spec.params.get("n_estimators", 24)),
+            learning_rate=float(spec.params.get("learning_rate", 0.05)),
+            max_bins=int(spec.params.get("max_bins", 12)),
+            min_leaf_size=int(spec.params.get("min_leaf_size", 16)),
+            random_seed=spec.seed,
+        )
     raise KeyError(f"Unsupported model spec: {spec.name}")
 
 
@@ -113,6 +136,23 @@ def generate_oof_predictions(
                 tuning_frame["model_name"] = spec.name
                 tuning_rows.extend(tuning_frame.to_dict(orient="records"))
                 model = RidgeRegressionModel(alpha=tuned_alpha) if spec.name == "ridge_regression" else LassoRegressionModel(alpha=tuned_alpha)
+            elif spec.name in {"gradient_boosting_regressor", "gradient_boosting_ranker"}:
+                tuned_params = dict(spec.params)
+                if not tuned_params:
+                    tuned_params, tuning_frame = tune_boosting_model(
+                        spec.name,
+                        n_trials=int(spec.n_trials or 16),
+                        train_frame=train_frame,
+                        valid_frame=valid_frame,
+                        feature_columns=feature_columns,
+                        label_column=label_column,
+                        seed=spec.seed,
+                    )
+                    tuning_frame["fold_id"] = fold.fold_id
+                    tuning_frame["model_name"] = spec.name
+                    tuning_rows.extend(tuning_frame.to_dict(orient="records"))
+                tuned_spec = ModelRunSpec(name=spec.name, params=tuned_params, seed=spec.seed, n_trials=spec.n_trials)
+                model = _instantiate_model(tuned_spec)
 
             fit_frame = pd.concat([train_frame, valid_frame], ignore_index=True)
             model.fit(fit_frame, feature_columns, label_column)

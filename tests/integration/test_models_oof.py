@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from functools import lru_cache
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -31,6 +33,17 @@ def _split_config() -> SplitsConfig:
     )
 
 
+@lru_cache(maxsize=1)
+def _cached_bundle():
+    return build_model_research_bundle()
+
+
+@lru_cache(maxsize=1)
+def _cached_folds():
+    bundle = _cached_bundle()
+    return generate_walk_forward_splits(bundle.panel, _split_config(), bundle.calendar, primary_horizon_days=5).folds
+
+
 def _rank_ic_mean(predictions: pd.DataFrame, panel: pd.DataFrame, label_column: str) -> float:
     merged = predictions.merge(panel[["date", "security_id", label_column]], on=["date", "security_id"], how="left")
     scores = []
@@ -45,8 +58,8 @@ def _rank_ic_mean(predictions: pd.DataFrame, panel: pd.DataFrame, label_column: 
 
 
 def test_random_baseline_has_near_zero_predictive_skill_on_sanity_fixture() -> None:
-    bundle = build_model_research_bundle()
-    folds = generate_walk_forward_splits(bundle.panel, _split_config(), bundle.calendar, primary_horizon_days=5).folds
+    bundle = _cached_bundle()
+    folds = _cached_folds()
     result = generate_oof_predictions(
         bundle.panel,
         folds,
@@ -60,8 +73,8 @@ def test_random_baseline_has_near_zero_predictive_skill_on_sanity_fixture() -> N
 
 
 def test_heuristic_baseline_runs_end_to_end() -> None:
-    bundle = build_model_research_bundle()
-    folds = generate_walk_forward_splits(bundle.panel, _split_config(), bundle.calendar, primary_horizon_days=5).folds
+    bundle = _cached_bundle()
+    folds = _cached_folds()
     result = generate_oof_predictions(
         bundle.panel,
         folds,
@@ -75,7 +88,7 @@ def test_heuristic_baseline_runs_end_to_end() -> None:
 
 
 def test_ridge_and_lasso_wrappers_are_serializable() -> None:
-    bundle = build_model_research_bundle()
+    bundle = _cached_bundle()
     train = bundle.panel.iloc[:200].copy()
     ridge = RidgeRegressionModel(alpha=0.5).fit(train, bundle.feature_columns, bundle.label_column)
     lasso = LassoRegressionModel(alpha=0.01).fit(train, bundle.feature_columns, bundle.label_column)
@@ -88,8 +101,8 @@ def test_ridge_and_lasso_wrappers_are_serializable() -> None:
 
 
 def test_tuning_engine_does_not_touch_test_fold() -> None:
-    bundle = build_model_research_bundle()
-    folds = generate_walk_forward_splits(bundle.panel, _split_config(), bundle.calendar, primary_horizon_days=5).folds
+    bundle = _cached_bundle()
+    folds = _cached_folds()
     original = generate_oof_predictions(
         bundle.panel,
         folds[:1],
@@ -116,8 +129,8 @@ def test_tuning_engine_does_not_touch_test_fold() -> None:
 
 
 def test_oof_prediction_store_is_unique_by_date_security_model() -> None:
-    bundle = build_model_research_bundle()
-    folds = generate_walk_forward_splits(bundle.panel, _split_config(), bundle.calendar, primary_horizon_days=5).folds
+    bundle = _cached_bundle()
+    folds = _cached_folds()
     result = generate_oof_predictions(
         bundle.panel,
         folds[:2],
@@ -130,8 +143,8 @@ def test_oof_prediction_store_is_unique_by_date_security_model() -> None:
 
 
 def test_prediction_manifests_contain_coverage_by_fold() -> None:
-    bundle = build_model_research_bundle()
-    folds = generate_walk_forward_splits(bundle.panel, _split_config(), bundle.calendar, primary_horizon_days=5).folds
+    bundle = _cached_bundle()
+    folds = _cached_folds()
     result = generate_oof_predictions(
         bundle.panel,
         folds[:2],
@@ -142,3 +155,21 @@ def test_prediction_manifests_contain_coverage_by_fold() -> None:
     )
     assert result.manifest["coverage_by_fold"]
     assert set(result.coverage_by_fold.columns) >= {"fold_id", "model_name", "row_count", "unique_dates"}
+
+
+def test_gradient_boosting_ranker_runs_in_oof_path_with_tuning() -> None:
+    bundle = _cached_bundle()
+    folds = _cached_folds()
+    result = generate_oof_predictions(
+        bundle.panel,
+        folds[:2],
+        model_specs=[ModelRunSpec(name="gradient_boosting_ranker", n_trials=8, seed=17)],
+        feature_columns=bundle.feature_columns,
+        label_column=bundle.label_column,
+        dataset_version="ds_gbm_ranker",
+    )
+    metric = _rank_ic_mean(result.predictions, bundle.panel, bundle.label_column)
+    assert not result.predictions.empty
+    assert set(result.predictions["model_name"]) == {"gradient_boosting_ranker"}
+    assert not result.tuning_diagnostics.empty
+    assert metric > 0.15

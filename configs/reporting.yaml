@@ -13,6 +13,7 @@ include_sections:
 - capacity_analysis
 - regime_analysis
 - decay_analysis
+- ablation_analysis
 - limitations
 - next_steps
 mandatory_figures:
