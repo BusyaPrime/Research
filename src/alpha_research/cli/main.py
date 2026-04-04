@@ -89,7 +89,7 @@ def _run_bootstrap(args: argparse.Namespace) -> int:
         runtime_metadata=runtime_metadata,
         notes=[
             "Foundation bootstrap only.",
-            "Non-bootstrap pipeline commands remain explicit stubs until their phases are implemented.",
+            "Часть stage-команд уже работает в operational path; незакрытый хвост остался в vendor ingest, model zoo и финальном release-hardening.",
         ],
     )
     manifest_path = write_model_document(manifest, run_dir / "bootstrap_manifest.json")
