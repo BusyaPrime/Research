@@ -8,6 +8,8 @@
 
 - `implementation_status.yaml` — машинно-читаемый снимок состояния проекта;
 - `spec_gap_audit.md` — человеческий аудит по фазам, инвариантам и хвостам до полного DoD.
+- `lego_progress.yaml` — статус по backlog-эпикам `E00..E26`;
+- `lego_progress.md` — человеческий комментарий к backlog progress.
 
 ## Как этим пользоваться
 

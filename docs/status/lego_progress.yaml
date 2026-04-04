@@ -1,0 +1,100 @@
+snapshot_date: "2026-04-04"
+overall_assessment:
+  lego_method_applied: true
+  backlog_used_as_primary_decomposition: true
+  epic_count: 27
+epics:
+  - epic_id: E00
+    epic_name: Governance and operating model
+    status: mostly_completed
+    notes:
+      - "Governance artifacts, glossary, RACI, DoD и anti-leakage checklist добавлены."
+      - "При желании можно еще сильнее связать governance слой с machine-readable audit."
+  - epic_id: E01
+    epic_name: Repository bootstrap and environment
+    status: completed
+  - epic_id: E02
+    epic_name: Configuration, logging and experiment tracking
+    status: completed
+  - epic_id: E03
+    epic_name: Calendars, timestamps and identifiers
+    status: completed
+  - epic_id: E04
+    epic_name: Security master and reference data
+    status: completed
+  - epic_id: E05
+    epic_name: Market raw ingestion
+    status: completed
+  - epic_id: E06
+    epic_name: Fundamentals raw ingestion
+    status: completed
+  - epic_id: E07
+    epic_name: Corporate actions ingestion
+    status: completed
+  - epic_id: E08
+    epic_name: Market data quality assurance
+    status: completed
+  - epic_id: E09
+    epic_name: Fundamentals data quality assurance
+    status: completed
+  - epic_id: E10
+    epic_name: Point-in-time engine
+    status: completed
+  - epic_id: E11
+    epic_name: Universe construction
+    status: completed
+  - epic_id: E12
+    epic_name: Label engine
+    status: completed
+  - epic_id: E13
+    epic_name: Price, momentum and relative-return features
+    status: completed
+  - epic_id: E14
+    epic_name: Volatility, liquidity and trend features
+    status: completed
+  - epic_id: E15
+    epic_name: Fundamental and staleness features
+    status: completed
+  - epic_id: E16
+    epic_name: Preprocessing and neutralization
+    status: completed
+  - epic_id: E17
+    epic_name: Dataset assembly and manifests
+    status: completed
+  - epic_id: E18
+    epic_name: Split engine and walk-forward validation
+    status: completed
+  - epic_id: E19
+    epic_name: Baselines and linear models
+    status: completed
+  - epic_id: E20
+    epic_name: Tree models and tuning
+    status: partially_completed
+    notes:
+      - "Config/spec path под advanced models есть, но operational runtime пока опирается на поддерживаемый baseline subset."
+  - epic_id: E21
+    epic_name: OOF predictions and prediction store
+    status: completed
+  - epic_id: E22
+    epic_name: Portfolio construction and constraints
+    status: mostly_completed
+    notes:
+      - "Основной контур собран, но beta-neutralization пока эвристическая."
+  - epic_id: E23
+    epic_name: Costs and execution simulation
+    status: completed
+  - epic_id: E24
+    epic_name: Backtest engine and capacity
+    status: mostly_completed
+    notes:
+      - "Capacity path есть, но visual/report polish еще не полностью добит."
+  - epic_id: E25
+    epic_name: Evaluation, robustness and reporting
+    status: mostly_completed
+    notes:
+      - "Report bundle, sections и HTML уже есть, figures пока не рендерятся отдельно."
+  - epic_id: E26
+    epic_name: Testing, CI and release readiness
+    status: mostly_completed
+    notes:
+      - "Тесты и CI есть, но до полного release-grade handoff bundle еще остается хвост."
