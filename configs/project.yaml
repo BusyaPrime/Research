@@ -1,0 +1,28 @@
+project_name: alpha_research_platform
+project_code: ARP-US-Daily-CS-01
+language: ru
+market: us_equities
+frequency: daily
+timezone: America/New_York
+decision_timestamp_policy: after_close_t
+execution_timestamp_policy: next_open_t_plus_1
+base_currency: USD
+default_random_seed: 42
+tracking:
+  backend: mlflow
+  tracking_uri: ./mlruns
+  log_git_commit: true
+  log_dataset_manifest: true
+  log_config_snapshot: true
+  log_artifacts: true
+storage:
+  raw_format: json_or_csv_as_received
+  normalized_format: parquet
+  compression: zstd
+  schema_versioning: true
+global_invariants:
+- future_data_forbidden
+- point_in_time_required
+- test_fold_is_never_touched_during_fit_or_tuning
+- execution_on_same_bar_is_forbidden_in_baseline
+- out_of_fold_predictions_only_for_backtest

@@ -1,0 +1,26 @@
+winsorization_options:
+- name: none
+  enabled: false
+- name: p1_p99
+  enabled: true
+  lower_pct: 1.0
+  upper_pct: 99.0
+- name: p0_5_p99_5
+  enabled: true
+  lower_pct: 0.5
+  upper_pct: 99.5
+scalers:
+- zscore_by_date
+- robust_zscore_by_date
+- percentile_rank_by_date
+neutralizers:
+- none
+- sector
+- beta
+- sector_plus_beta
+missing_policies:
+- leave_null_for_tree_models
+- cross_section_median_impute
+- sector_median_impute
+- model_native_missing
+fold_safe_fit_required: true

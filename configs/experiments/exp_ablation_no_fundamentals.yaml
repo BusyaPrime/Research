@@ -1,0 +1,14 @@
+experiment_name: ablation_no_fundamentals
+dataset_version: gold_latest
+label: label_excess_5d_oo
+featureset: technical_liquidity_only
+preprocessing:
+  winsor: p1_p99
+  scaler: robust_zscore_by_date
+  neutralizer: sector
+model:
+  name: gradient_boosting_regressor
+  n_trials: 30
+portfolio:
+  mode: decile_equal_weight
+cost_scenario: base

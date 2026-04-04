@@ -1,0 +1,25 @@
+eligible_security_types:
+- common_stock
+excluded_security_types:
+- ETF
+- ETN
+- ADR
+- preferred
+- warrant
+- unit
+- OTC
+allowed_exchanges:
+- NYSE
+- NASDAQ
+- AMEX
+min_price_usd: 5.0
+min_adv20_usd: 5000000
+optional_min_market_cap_usd: 1000000000
+min_feature_coverage_ratio: 0.7
+min_data_quality_score: 0.8
+liquidity_buckets:
+  high: top_30_percent_by_adv20
+  medium: middle_40_percent_by_adv20
+  low: bottom_30_percent_by_adv20
+membership_refresh: daily
+log_exclusion_reasons: true

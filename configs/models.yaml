@@ -1,0 +1,18 @@
+baseline_models:
+- random_score
+- heuristic_reversal_score
+- heuristic_momentum_score
+- heuristic_blend_score
+- ridge_regression
+- lasso_regression
+advanced_models:
+- gradient_boosting_regressor
+- gradient_boosting_ranker
+tuning:
+  engine: optuna_or_internal_search
+  n_trials_default: 50
+  early_stopping_enabled: true
+  optimize_metric: validation_rank_ic_mean
+sample_weights:
+  enabled: true
+  policy: optional_inverse_vol_or_liquidity_capped

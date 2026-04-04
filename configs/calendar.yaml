@@ -1,0 +1,9 @@
+exchange_calendar: XNYS
+use_half_days: true
+functions_required:
+- is_trading_day
+- next_trading_day
+- previous_trading_day
+- trading_day_distance
+- window_by_trading_days
+forbid_calendar_day_shift_for_labels: true

@@ -1,0 +1,602 @@
+ret_1:
+  family: returns
+  formula: ret_1(t) = close_t / close_(t-1) - 1
+  inputs:
+  - close
+  notes: Используется только если решение принимается после close_t.
+ret_2:
+  family: returns
+  formula: ret_2(t) = close_t / close_(t-2) - 1
+  inputs:
+  - close
+  notes: Используется только если решение принимается после close_t.
+ret_3:
+  family: returns
+  formula: ret_3(t) = close_t / close_(t-3) - 1
+  inputs:
+  - close
+  notes: Используется только если решение принимается после close_t.
+ret_5:
+  family: returns
+  formula: ret_5(t) = close_t / close_(t-5) - 1
+  inputs:
+  - close
+  notes: Используется только если решение принимается после close_t.
+ret_10:
+  family: returns
+  formula: ret_10(t) = close_t / close_(t-10) - 1
+  inputs:
+  - close
+  notes: Используется только если решение принимается после close_t.
+ret_21:
+  family: returns
+  formula: ret_21(t) = close_t / close_(t-21) - 1
+  inputs:
+  - close
+  notes: Используется только если решение принимается после close_t.
+ret_63:
+  family: returns
+  formula: ret_63(t) = close_t / close_(t-63) - 1
+  inputs:
+  - close
+  notes: Используется только если решение принимается после close_t.
+ret_126:
+  family: returns
+  formula: ret_126(t) = close_t / close_(t-126) - 1
+  inputs:
+  - close
+  notes: Используется только если решение принимается после close_t.
+ret_252:
+  family: returns
+  formula: ret_252(t) = close_t / close_(t-252) - 1
+  inputs:
+  - close
+  notes: Используется только если решение принимается после close_t.
+mom_5_ex1:
+  family: returns
+  formula: mom_5_ex1(t) = close_(t-1) / close_(t-6) - 1
+  inputs:
+  - close
+  notes: Momentum без последнего дня, чтобы отделить эффект short-term reversal.
+mom_10_ex1:
+  family: returns
+  formula: mom_10_ex1(t) = close_(t-1) / close_(t-11) - 1
+  inputs:
+  - close
+  notes: Momentum без последнего дня, чтобы отделить эффект short-term reversal.
+mom_21_ex1:
+  family: returns
+  formula: mom_21_ex1(t) = close_(t-1) / close_(t-22) - 1
+  inputs:
+  - close
+  notes: Momentum без последнего дня, чтобы отделить эффект short-term reversal.
+mom_63_ex1:
+  family: returns
+  formula: mom_63_ex1(t) = close_(t-1) / close_(t-64) - 1
+  inputs:
+  - close
+  notes: Momentum без последнего дня, чтобы отделить эффект short-term reversal.
+mom_126_ex1:
+  family: returns
+  formula: mom_126_ex1(t) = close_(t-1) / close_(t-127) - 1
+  inputs:
+  - close
+  notes: Momentum без последнего дня, чтобы отделить эффект short-term reversal.
+mom_252_ex1:
+  family: returns
+  formula: mom_252_ex1(t) = close_(t-1) / close_(t-253) - 1
+  inputs:
+  - close
+  notes: Momentum без последнего дня, чтобы отделить эффект short-term reversal.
+rev_1:
+  family: returns
+  formula: rev_1(t) = - ret_1(t)
+  inputs:
+  - ret_1
+  notes: Reversal score как отрицание короткого дохода.
+rev_2:
+  family: returns
+  formula: rev_2(t) = - ret_2(t)
+  inputs:
+  - ret_2
+  notes: Reversal score как отрицание короткого дохода.
+rev_5:
+  family: returns
+  formula: rev_5(t) = - ret_5(t)
+  inputs:
+  - ret_5
+  notes: Reversal score как отрицание короткого дохода.
+ex_bench_5:
+  family: relative_returns
+  formula: ex_bench_5(t) = ret_5(stock,t) - ret_5(benchmark,t)
+  inputs:
+  - close
+  - benchmark_close
+  notes: Избыточная доходность к бенчмарку.
+ex_sector_5:
+  family: relative_returns
+  formula: ex_sector_5(t) = ret_5(stock,t) - median(ret_5(sector peers,t))
+  inputs:
+  - ret_n
+  - sector
+  notes: Относительная доходность к медиане сектора.
+ex_bench_21:
+  family: relative_returns
+  formula: ex_bench_21(t) = ret_21(stock,t) - ret_21(benchmark,t)
+  inputs:
+  - close
+  - benchmark_close
+  notes: Избыточная доходность к бенчмарку.
+ex_sector_21:
+  family: relative_returns
+  formula: ex_sector_21(t) = ret_21(stock,t) - median(ret_21(sector peers,t))
+  inputs:
+  - ret_n
+  - sector
+  notes: Относительная доходность к медиане сектора.
+ex_bench_63:
+  family: relative_returns
+  formula: ex_bench_63(t) = ret_63(stock,t) - ret_63(benchmark,t)
+  inputs:
+  - close
+  - benchmark_close
+  notes: Избыточная доходность к бенчмарку.
+ex_sector_63:
+  family: relative_returns
+  formula: ex_sector_63(t) = ret_63(stock,t) - median(ret_63(sector peers,t))
+  inputs:
+  - ret_n
+  - sector
+  notes: Относительная доходность к медиане сектора.
+vol_5:
+  family: volatility
+  formula: vol_5(t) = std(log(close_i / close_(i-1))) for i in [t-5+1, ..., t]
+  inputs:
+  - close
+  notes: Обычная реализованная волатильность.
+vol_10:
+  family: volatility
+  formula: vol_10(t) = std(log(close_i / close_(i-1))) for i in [t-10+1, ..., t]
+  inputs:
+  - close
+  notes: Обычная реализованная волатильность.
+vol_21:
+  family: volatility
+  formula: vol_21(t) = std(log(close_i / close_(i-1))) for i in [t-21+1, ..., t]
+  inputs:
+  - close
+  notes: Обычная реализованная волатильность.
+vol_63:
+  family: volatility
+  formula: vol_63(t) = std(log(close_i / close_(i-1))) for i in [t-63+1, ..., t]
+  inputs:
+  - close
+  notes: Обычная реализованная волатильность.
+down_vol_21:
+  family: volatility
+  formula: down_vol_21(t) = std(min(log_ret_i, 0)) over last 21 trading days
+  inputs:
+  - close
+  notes: Волатильность только по отрицательным доходам.
+up_vol_21:
+  family: volatility
+  formula: up_vol_21(t) = std(max(log_ret_i, 0)) over last 21 trading days
+  inputs:
+  - close
+  notes: Волатильность только по положительным доходам.
+down_vol_63:
+  family: volatility
+  formula: down_vol_63(t) = std(min(log_ret_i, 0)) over last 63 trading days
+  inputs:
+  - close
+  notes: Волатильность только по отрицательным доходам.
+up_vol_63:
+  family: volatility
+  formula: up_vol_63(t) = std(max(log_ret_i, 0)) over last 63 trading days
+  inputs:
+  - close
+  notes: Волатильность только по положительным доходам.
+hl_range_21:
+  family: volatility
+  formula: hl_range_21(t) = mean((high_i - low_i) / close_i) for i in [t-20, ..., t]
+  inputs:
+  - high
+  - low
+  - close
+  notes: Средний intraday range.
+parkinson_21:
+  family: volatility
+  formula: parkinson_21(t) = sqrt((1 / (4 * 21 * ln(2))) * sum((ln(high_i / low_i))^2))
+  inputs:
+  - high
+  - low
+  notes: Range-based volatility estimator.
+gk_21:
+  family: volatility
+  formula: gk_21(t) = sqrt((1 / 21) * sum(0.5 * (ln(high_i / low_i))^2 - (2ln2 - 1) * (ln(close_i / open_i))^2))
+  inputs:
+  - open
+  - high
+  - low
+  - close
+  notes: Garman-Klass volatility estimator.
+atr_14:
+  family: volatility
+  formula: atr_14(t) = mean(TR_i) over last 14 days, where TR_i = max(high_i-low_i, abs(high_i-close_(i-1)), abs(low_i-close_(i-1)))
+  inputs:
+  - high
+  - low
+  - close
+  notes: ATR-like volatility proxy.
+log_volume_1:
+  family: liquidity
+  formula: log_volume_1(t) = ln(1 + volume_t)
+  inputs:
+  - volume
+  notes: ''
+log_dollar_volume_1:
+  family: liquidity
+  formula: log_dollar_volume_1(t) = ln(1 + close_t * volume_t)
+  inputs:
+  - close
+  - volume
+  notes: ''
+adv5:
+  family: liquidity
+  formula: adv5(t) = mean(close_i * volume_i) for i in [t-5+1, ..., t]
+  inputs:
+  - close
+  - volume
+  notes: Средний дневной долларовый объем.
+adv20:
+  family: liquidity
+  formula: adv20(t) = mean(close_i * volume_i) for i in [t-20+1, ..., t]
+  inputs:
+  - close
+  - volume
+  notes: Средний дневной долларовый объем.
+adv60:
+  family: liquidity
+  formula: adv60(t) = mean(close_i * volume_i) for i in [t-60+1, ..., t]
+  inputs:
+  - close
+  - volume
+  notes: Средний дневной долларовый объем.
+volume_surprise_5:
+  family: liquidity
+  formula: volume_surprise_5(t) = volume_t / mean(volume_i) for i in [t-5, ..., t-1]
+  inputs:
+  - volume
+  notes: ''
+volume_surprise_20:
+  family: liquidity
+  formula: volume_surprise_20(t) = volume_t / mean(volume_i) for i in [t-20, ..., t-1]
+  inputs:
+  - volume
+  notes: ''
+amihud_21:
+  family: liquidity
+  formula: amihud_21(t) = mean(abs(ret_1(i)) / (close_i * volume_i)) over last 21 days
+  inputs:
+  - close
+  - volume
+  - ret_1
+  notes: Прокси price impact / illiquidity.
+turnover_proxy_21:
+  family: liquidity
+  formula: turnover_proxy_21(t) = mean(volume_i / shares_outstanding_i) over last 21 days
+  inputs:
+  - volume
+  - shares_outstanding
+  notes: Если shares_outstanding недоступен, используется proxy из float shares или пропуск.
+zero_volume_rate_21:
+  family: liquidity
+  formula: zero_volume_rate_21(t) = mean(1(volume_i == 0)) over last 21 days
+  inputs:
+  - volume
+  notes: ''
+liquidity_rank_20:
+  family: liquidity
+  formula: liquidity_rank_20(t) = percentile_rank(adv20_t within universe on date t)
+  inputs:
+  - adv20
+  notes: Cross-sectional liquidity percentile.
+px_to_ma20:
+  family: trend_state
+  formula: px_to_ma20(t) = close_t / mean(close_i for i in [t-20+1, ..., t]) - 1
+  inputs:
+  - close
+  notes: ''
+px_to_ma50:
+  family: trend_state
+  formula: px_to_ma50(t) = close_t / mean(close_i for i in [t-50+1, ..., t]) - 1
+  inputs:
+  - close
+  notes: ''
+px_to_ma100:
+  family: trend_state
+  formula: px_to_ma100(t) = close_t / mean(close_i for i in [t-100+1, ..., t]) - 1
+  inputs:
+  - close
+  notes: ''
+px_to_ma200:
+  family: trend_state
+  formula: px_to_ma200(t) = close_t / mean(close_i for i in [t-200+1, ..., t]) - 1
+  inputs:
+  - close
+  notes: ''
+ma20_to_ma50:
+  family: trend_state
+  formula: ma20_to_ma50(t) = MA20_t / MA50_t - 1
+  inputs:
+  - close
+  notes: ''
+ma50_to_ma200:
+  family: trend_state
+  formula: ma50_to_ma200(t) = MA50_t / MA200_t - 1
+  inputs:
+  - close
+  notes: ''
+dist_to_20d_high:
+  family: trend_state
+  formula: dist_to_20d_high(t) = close_t / max(high_i over last 20 days) - 1
+  inputs:
+  - close
+  - high
+  notes: ''
+dist_to_20d_low:
+  family: trend_state
+  formula: dist_to_20d_low(t) = close_t / min(low_i over last 20 days) - 1
+  inputs:
+  - close
+  - low
+  notes: ''
+dist_to_52w_high:
+  family: trend_state
+  formula: dist_to_52w_high(t) = close_t / max(high_i over last 252 days) - 1
+  inputs:
+  - close
+  - high
+  notes: ''
+dist_to_52w_low:
+  family: trend_state
+  formula: dist_to_52w_low(t) = close_t / min(low_i over last 252 days) - 1
+  inputs:
+  - close
+  - low
+  notes: ''
+breakout_20d_up:
+  family: trend_state
+  formula: breakout_20d_up(t) = 1 if close_t > max(high_i over [t-20, ..., t-1]) else 0
+  inputs:
+  - close
+  - high
+  notes: ''
+breakout_20d_down:
+  family: trend_state
+  formula: breakout_20d_down(t) = 1 if close_t < min(low_i over [t-20, ..., t-1]) else 0
+  inputs:
+  - close
+  - low
+  notes: ''
+cs_rank_ret_5:
+  family: cross_sectional_context
+  formula: cs_rank_ret_5(t) = percentile_rank(ret_5 across universe on date t)
+  inputs:
+  - ret_5
+  notes: Cross-sectional percentile.
+cs_rank_ret_21:
+  family: cross_sectional_context
+  formula: cs_rank_ret_21(t) = percentile_rank(ret_21 across universe on date t)
+  inputs:
+  - ret_21
+  notes: Cross-sectional percentile.
+cs_rank_ret_63:
+  family: cross_sectional_context
+  formula: cs_rank_ret_63(t) = percentile_rank(ret_63 across universe on date t)
+  inputs:
+  - ret_63
+  notes: Cross-sectional percentile.
+cs_rank_vol_21:
+  family: cross_sectional_context
+  formula: cs_rank_vol_21(t) = percentile_rank(vol_21 across universe on date t)
+  inputs:
+  - vol_21
+  notes: Cross-sectional percentile.
+cs_rank_adv20:
+  family: cross_sectional_context
+  formula: cs_rank_adv20(t) = percentile_rank(adv20 across universe on date t)
+  inputs:
+  - adv20
+  notes: Cross-sectional percentile.
+sector_rank_ret_21:
+  family: cross_sectional_context
+  formula: sector_rank_ret_21(t) = percentile_rank(ret_21 across same sector on date t)
+  inputs:
+  - ret_21
+  - sector
+  notes: Sector-neutral percentile.
+sector_rank_vol_21:
+  family: cross_sectional_context
+  formula: sector_rank_vol_21(t) = percentile_rank(vol_21 across same sector on date t)
+  inputs:
+  - vol_21
+  - sector
+  notes: Sector-neutral percentile.
+sector_rank_adv20:
+  family: cross_sectional_context
+  formula: sector_rank_adv20(t) = percentile_rank(adv20 across same sector on date t)
+  inputs:
+  - adv20
+  - sector
+  notes: Sector-neutral percentile.
+book_to_price:
+  family: fundamentals
+  formula: book_to_price(t) = book_equity_t / market_cap_t
+  inputs:
+  - book_equity
+  - market_cap
+  notes: Value factor.
+earnings_yield:
+  family: fundamentals
+  formula: earnings_yield(t) = net_income_ttm_t / market_cap_t
+  inputs:
+  - net_income_ttm
+  - market_cap
+  notes: Inverse P/E proxy.
+sales_yield:
+  family: fundamentals
+  formula: sales_yield(t) = revenue_ttm_t / market_cap_t
+  inputs:
+  - revenue_ttm
+  - market_cap
+  notes: Inverse P/S proxy.
+cashflow_yield:
+  family: fundamentals
+  formula: cashflow_yield(t) = operating_cashflow_ttm_t / market_cap_t
+  inputs:
+  - operating_cashflow_ttm
+  - market_cap
+  notes: Cash-flow based value factor.
+roe:
+  family: fundamentals
+  formula: roe(t) = net_income_ttm_t / average_book_equity_t
+  inputs:
+  - net_income_ttm
+  - average_book_equity
+  notes: Return on equity.
+roa:
+  family: fundamentals
+  formula: roa(t) = net_income_ttm_t / average_total_assets_t
+  inputs:
+  - net_income_ttm
+  - average_total_assets
+  notes: Return on assets.
+gross_profitability:
+  family: fundamentals
+  formula: gross_profitability(t) = gross_profit_ttm_t / total_assets_t
+  inputs:
+  - gross_profit_ttm
+  - total_assets
+  notes: Quality factor per Novy-Marx style intuition.
+operating_margin:
+  family: fundamentals
+  formula: operating_margin(t) = operating_income_ttm_t / revenue_ttm_t
+  inputs:
+  - operating_income_ttm
+  - revenue_ttm
+  notes: Operating efficiency.
+accruals:
+  family: fundamentals
+  formula: accruals(t) = (net_income_ttm_t - operating_cashflow_ttm_t) / total_assets_t
+  inputs:
+  - net_income_ttm
+  - operating_cashflow_ttm
+  - total_assets
+  notes: Accrual quality proxy.
+sales_growth_yoy:
+  family: fundamentals
+  formula: sales_growth_yoy(t) = revenue_ttm_t / revenue_ttm_(t-252) - 1
+  inputs:
+  - revenue_ttm
+  notes: YoY growth using last available PIT data.
+earnings_growth_yoy:
+  family: fundamentals
+  formula: earnings_growth_yoy(t) = net_income_ttm_t / net_income_ttm_(t-252) - 1
+  inputs:
+  - net_income_ttm
+  notes: YoY earnings growth.
+asset_growth_yoy:
+  family: fundamentals
+  formula: asset_growth_yoy(t) = total_assets_t / total_assets_(t-252) - 1
+  inputs:
+  - total_assets
+  notes: Balance sheet growth factor.
+debt_to_equity:
+  family: fundamentals
+  formula: debt_to_equity(t) = total_debt_t / book_equity_t
+  inputs:
+  - total_debt
+  - book_equity
+  notes: Leverage ratio.
+interest_coverage:
+  family: fundamentals
+  formula: interest_coverage(t) = ebit_ttm_t / interest_expense_ttm_t
+  inputs:
+  - ebit_ttm
+  - interest_expense_ttm
+  notes: Solvency proxy.
+current_ratio:
+  family: fundamentals
+  formula: current_ratio(t) = current_assets_t / current_liabilities_t
+  inputs:
+  - current_assets
+  - current_liabilities
+  notes: Liquidity ratio.
+days_since_last_filing:
+  family: staleness_flags
+  formula: days_since_last_filing(t) = trading_days_between(date t and latest available filing date <= t)
+  inputs:
+  - available_from
+  notes: ''
+fundamental_staleness_90:
+  family: staleness_flags
+  formula: fundamental_staleness_90(t) = 1 if days_since_last_filing(t) > 90 else 0
+  inputs:
+  - days_since_last_filing
+  notes: ''
+fundamental_staleness_180:
+  family: staleness_flags
+  formula: fundamental_staleness_180(t) = 1 if days_since_last_filing(t) > 180 else 0
+  inputs:
+  - days_since_last_filing
+  notes: ''
+missing_book_to_price_flag:
+  family: staleness_flags
+  formula: missing_book_to_price_flag(t) = 1 if book_to_price is null else 0
+  inputs:
+  - book_to_price
+  notes: ''
+missing_quality_flag:
+  family: staleness_flags
+  formula: missing_quality_flag(t) = 1 if any(core quality feature is null) else 0
+  inputs:
+  - roe
+  - roa
+  - gross_profitability
+  notes: ''
+mom_21_ex1_x_liquidity_rank_20:
+  family: interactions
+  formula: mom_21_ex1_x_liquidity_rank_20(t) = mom_21_ex1(t) * liquidity_rank_20(t)
+  inputs:
+  - mom_21_ex1
+  - liquidity_rank_20
+  notes: Интеракционная feature, подлежащая отдельной ablation-проверке.
+rev_1_x_vol_21:
+  family: interactions
+  formula: rev_1_x_vol_21(t) = rev_1(t) * vol_21(t)
+  inputs:
+  - rev_1
+  - vol_21
+  notes: Интеракционная feature, подлежащая отдельной ablation-проверке.
+book_to_price_x_roe:
+  family: interactions
+  formula: book_to_price_x_roe(t) = book_to_price(t) * roe(t)
+  inputs:
+  - book_to_price
+  - roe
+  notes: Интеракционная feature, подлежащая отдельной ablation-проверке.
+px_to_ma50_x_vol_21:
+  family: interactions
+  formula: px_to_ma50_x_vol_21(t) = px_to_ma50(t) * vol_21(t)
+  inputs:
+  - px_to_ma50
+  - vol_21
+  notes: Интеракционная feature, подлежащая отдельной ablation-проверке.
+earnings_yield_x_liquidity_rank_20:
+  family: interactions
+  formula: earnings_yield_x_liquidity_rank_20(t) = earnings_yield(t) * liquidity_rank_20(t)
+  inputs:
+  - earnings_yield
+  - liquidity_rank_20
+  notes: Интеракционная feature, подлежащая отдельной ablation-проверке.

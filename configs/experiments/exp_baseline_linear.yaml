@@ -1,0 +1,17 @@
+experiment_name: baseline_linear_excess_5d
+dataset_version: gold_latest
+label: label_excess_5d_oo
+featureset: all_minus_interactions
+preprocessing:
+  winsor: p0_5_p99_5
+  scaler: zscore_by_date
+  neutralizer: sector_plus_beta
+model:
+  name: ridge_regression
+  alpha_grid:
+  - 0.1
+  - 1.0
+  - 10.0
+portfolio:
+  mode: decile_equal_weight
+cost_scenario: base

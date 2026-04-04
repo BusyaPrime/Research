@@ -1,0 +1,14 @@
+experiment_name: cost_stress_gbm_ranker
+dataset_version: gold_latest
+label: label_excess_5d_oo
+featureset: all_features_v1
+preprocessing:
+  winsor: p0_5_p99_5
+  scaler: percentile_rank_by_date
+  neutralizer: sector_plus_beta
+model:
+  name: gradient_boosting_ranker
+  use_best_previous_params: true
+portfolio:
+  mode: rank_weighted
+cost_scenario: severely_stressed

@@ -1,0 +1,26 @@
+primary_label: label_excess_5d_oo
+secondary_labels:
+- label_excess_1d_oo
+- label_resid_5d_oo
+- label_raw_5d_oo
+execution_reference: open_t_plus_1
+horizons_trading_days:
+- 1
+- 5
+- 10
+- 20
+families:
+- raw
+- excess
+- residual
+- binary_quantile
+- multiclass_quantile
+overlap_policy:
+  allow_overlap: true
+  purge_days: 5
+  embargo_days: 5
+benchmark: SPY_like_proxy_or_index_return
+residualization_controls:
+- benchmark_return
+- sector_dummies
+- beta_estimate

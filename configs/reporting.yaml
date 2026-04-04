@@ -1,0 +1,30 @@
+formats:
+- markdown
+- html
+include_sections:
+- executive_summary
+- time_semantics
+- data_lineage
+- feature_catalog
+- validation_protocol
+- model_comparison
+- backtest_results
+- cost_sensitivity
+- capacity_analysis
+- regime_analysis
+- decay_analysis
+- limitations
+- next_steps
+mandatory_figures:
+- universe_size_over_time
+- coverage_heatmap
+- ic_over_time
+- rolling_ic
+- equity_curve_gross
+- equity_curve_net
+- drawdown_curve
+- turnover_curve
+- cost_decomposition
+- exposure_curve
+- capacity_curve
+- decay_curve

@@ -1,0 +1,577 @@
+raw_market_request_manifest:
+- field_name: request_id
+  dtype: string
+  nullable: false
+  description: Уникальный идентификатор запроса к провайдеру
+- field_name: provider_name
+  dtype: string
+  nullable: false
+  description: Имя провайдера
+- field_name: endpoint_name
+  dtype: string
+  nullable: false
+  description: Имя endpoint
+- field_name: symbols_requested
+  dtype: array<string>
+  nullable: false
+  description: Список запрошенных тикеров
+- field_name: start_date
+  dtype: date
+  nullable: false
+  description: Начало периода
+- field_name: end_date
+  dtype: date
+  nullable: false
+  description: Конец периода
+- field_name: fetched_at_utc
+  dtype: timestamp
+  nullable: false
+  description: Время загрузки
+- field_name: payload_path
+  dtype: string
+  nullable: false
+  description: Путь до raw payload
+- field_name: row_count_raw
+  dtype: int64
+  nullable: false
+  description: Количество сырых строк
+- field_name: checksum
+  dtype: string
+  nullable: false
+  description: Контрольная сумма
+raw_market_payload:
+- field_name: provider_symbol
+  dtype: string
+  nullable: false
+  description: Идентификатор тикера у провайдера
+- field_name: trade_date
+  dtype: date
+  nullable: false
+  description: Торговая дата
+- field_name: open
+  dtype: float64
+  nullable: true
+  description: Цена открытия
+- field_name: high
+  dtype: float64
+  nullable: true
+  description: Максимум
+- field_name: low
+  dtype: float64
+  nullable: true
+  description: Минимум
+- field_name: close
+  dtype: float64
+  nullable: true
+  description: Цена закрытия
+- field_name: adj_close
+  dtype: float64
+  nullable: true
+  description: Скорректированная цена закрытия
+- field_name: volume
+  dtype: int64
+  nullable: true
+  description: Объем
+- field_name: currency
+  dtype: string
+  nullable: true
+  description: Валюта
+- field_name: raw_payload_version
+  dtype: string
+  nullable: false
+  description: Версия сырого пакета
+security_master:
+- field_name: security_id
+  dtype: string
+  nullable: false
+  description: Внутренний стабильный идентификатор бумаги
+- field_name: symbol
+  dtype: string
+  nullable: false
+  description: Текущий отображаемый тикер
+- field_name: security_type
+  dtype: string
+  nullable: false
+  description: Тип инструмента
+- field_name: exchange
+  dtype: string
+  nullable: true
+  description: Биржа листинга
+- field_name: listing_date
+  dtype: date
+  nullable: true
+  description: Дата листинга
+- field_name: delisting_date
+  dtype: date
+  nullable: true
+  description: Дата делистинга
+- field_name: sector
+  dtype: string
+  nullable: true
+  description: Сектор
+- field_name: industry
+  dtype: string
+  nullable: true
+  description: Индустрия
+- field_name: country
+  dtype: string
+  nullable: true
+  description: Страна
+- field_name: currency
+  dtype: string
+  nullable: true
+  description: Базовая валюта
+- field_name: is_common_stock
+  dtype: bool
+  nullable: false
+  description: Флаг обычной акции
+bronze_market_daily:
+- field_name: security_id
+  dtype: string
+  nullable: false
+  description: Внутренний идентификатор бумаги
+- field_name: symbol
+  dtype: string
+  nullable: false
+  description: Тикер на дату
+- field_name: trade_date
+  dtype: date
+  nullable: false
+  description: Торговая дата
+- field_name: open
+  dtype: float64
+  nullable: true
+  description: Открытие
+- field_name: high
+  dtype: float64
+  nullable: true
+  description: Максимум
+- field_name: low
+  dtype: float64
+  nullable: true
+  description: Минимум
+- field_name: close
+  dtype: float64
+  nullable: true
+  description: Закрытие
+- field_name: adj_close
+  dtype: float64
+  nullable: true
+  description: Adjusted close
+- field_name: volume
+  dtype: int64
+  nullable: true
+  description: Объем
+- field_name: currency
+  dtype: string
+  nullable: true
+  description: Валюта
+- field_name: provider_name
+  dtype: string
+  nullable: false
+  description: Провайдер
+- field_name: data_version
+  dtype: string
+  nullable: false
+  description: Версия датасета
+bronze_fundamentals:
+- field_name: security_id
+  dtype: string
+  nullable: false
+  description: Внутренний идентификатор бумаги
+- field_name: source_company_id
+  dtype: string
+  nullable: false
+  description: Идентификатор эмитента у источника
+- field_name: form_type
+  dtype: string
+  nullable: true
+  description: Тип формы
+- field_name: filing_date
+  dtype: date
+  nullable: true
+  description: Дата filing
+- field_name: acceptance_datetime
+  dtype: timestamp
+  nullable: true
+  description: Время принятия filing
+- field_name: fiscal_period_end
+  dtype: date
+  nullable: true
+  description: Конец отчетного периода
+- field_name: metric_name_raw
+  dtype: string
+  nullable: false
+  description: Сырое имя метрики
+- field_name: metric_name_canonical
+  dtype: string
+  nullable: false
+  description: Каноническое имя метрики
+- field_name: metric_value
+  dtype: float64
+  nullable: true
+  description: Значение метрики
+- field_name: metric_unit
+  dtype: string
+  nullable: true
+  description: Единица измерения
+- field_name: statement_type
+  dtype: string
+  nullable: true
+  description: Тип отчета
+- field_name: available_from
+  dtype: timestamp
+  nullable: false
+  description: Точка времени доступности
+- field_name: is_restatement
+  dtype: bool
+  nullable: false
+  description: Флаг рестейтмента
+- field_name: data_version
+  dtype: string
+  nullable: false
+  description: Версия датасета
+bronze_corporate_actions:
+- field_name: security_id
+  dtype: string
+  nullable: false
+  description: Идентификатор бумаги
+- field_name: event_type
+  dtype: string
+  nullable: false
+  description: Тип события
+- field_name: event_date
+  dtype: date
+  nullable: true
+  description: Дата события
+- field_name: effective_date
+  dtype: date
+  nullable: true
+  description: Дата вступления в силу
+- field_name: split_ratio
+  dtype: float64
+  nullable: true
+  description: Коэффициент сплита
+- field_name: dividend_amount
+  dtype: float64
+  nullable: true
+  description: Дивиденд
+- field_name: delisting_code
+  dtype: string
+  nullable: true
+  description: Код делистинга
+- field_name: old_symbol
+  dtype: string
+  nullable: true
+  description: Старый тикер
+- field_name: new_symbol
+  dtype: string
+  nullable: true
+  description: Новый тикер
+- field_name: data_version
+  dtype: string
+  nullable: false
+  description: Версия датасета
+silver_market_pit:
+- field_name: security_id
+  dtype: string
+  nullable: false
+  description: Идентификатор бумаги
+- field_name: trade_date
+  dtype: date
+  nullable: false
+  description: Торговая дата
+- field_name: open
+  dtype: float64
+  nullable: true
+  description: Открытие
+- field_name: high
+  dtype: float64
+  nullable: true
+  description: Максимум
+- field_name: low
+  dtype: float64
+  nullable: true
+  description: Минимум
+- field_name: close
+  dtype: float64
+  nullable: true
+  description: Закрытие
+- field_name: adj_close
+  dtype: float64
+  nullable: true
+  description: Adjusted close
+- field_name: volume
+  dtype: int64
+  nullable: true
+  description: Объем
+- field_name: dollar_volume
+  dtype: float64
+  nullable: true
+  description: close * volume
+- field_name: is_price_valid
+  dtype: bool
+  nullable: false
+  description: Флаг валидности цены
+- field_name: is_volume_valid
+  dtype: bool
+  nullable: false
+  description: Флаг валидности объема
+- field_name: tradable_flag_prelim
+  dtype: bool
+  nullable: false
+  description: Предварительная торгуемость
+- field_name: data_quality_score
+  dtype: float64
+  nullable: false
+  description: Скор качества строки
+- field_name: data_version
+  dtype: string
+  nullable: false
+  description: Версия датасета
+silver_fundamentals_pit:
+- field_name: security_id
+  dtype: string
+  nullable: false
+  description: Идентификатор бумаги
+- field_name: available_from
+  dtype: timestamp
+  nullable: false
+  description: Начало интервала доступности
+- field_name: available_to
+  dtype: timestamp
+  nullable: true
+  description: Конец интервала доступности
+- field_name: metric_name_canonical
+  dtype: string
+  nullable: false
+  description: Метрика
+- field_name: metric_value
+  dtype: float64
+  nullable: true
+  description: Значение
+- field_name: is_latest_known_as_of_date
+  dtype: bool
+  nullable: false
+  description: Флаг последнего факта
+- field_name: staleness_days
+  dtype: int32
+  nullable: true
+  description: Давность в днях
+- field_name: is_restatement
+  dtype: bool
+  nullable: false
+  description: Флаг рестейтмента
+- field_name: data_version
+  dtype: string
+  nullable: false
+  description: Версия датасета
+universe_snapshot:
+- field_name: date
+  dtype: date
+  nullable: false
+  description: Дата среза universe
+- field_name: security_id
+  dtype: string
+  nullable: false
+  description: Бумага
+- field_name: is_in_universe
+  dtype: bool
+  nullable: false
+  description: Флаг включения
+- field_name: exclusion_reason_code
+  dtype: string
+  nullable: true
+  description: Код причины исключения
+- field_name: price_t
+  dtype: float64
+  nullable: true
+  description: Цена
+- field_name: adv20_usd_t
+  dtype: float64
+  nullable: true
+  description: ADV20 в USD
+- field_name: feature_coverage_ratio
+  dtype: float64
+  nullable: true
+  description: Покрытие фичами
+- field_name: data_quality_score
+  dtype: float64
+  nullable: true
+  description: Скор качества
+- field_name: liquidity_bucket
+  dtype: string
+  nullable: true
+  description: Бакет ликвидности
+gold_model_panel:
+- field_name: date
+  dtype: date
+  nullable: false
+  description: Торговая дата
+- field_name: security_id
+  dtype: string
+  nullable: false
+  description: Бумага
+- field_name: symbol
+  dtype: string
+  nullable: false
+  description: Тикер
+- field_name: is_in_universe
+  dtype: bool
+  nullable: false
+  description: Флаг участия
+- field_name: sector
+  dtype: string
+  nullable: true
+  description: Сектор
+- field_name: industry
+  dtype: string
+  nullable: true
+  description: Индустрия
+- field_name: liquidity_bucket
+  dtype: string
+  nullable: true
+  description: Бакет ликвидности
+- field_name: beta_estimate
+  dtype: float64
+  nullable: true
+  description: Оценка беты
+- field_name: feature_vector_version
+  dtype: string
+  nullable: false
+  description: Версия набора фичей
+- field_name: label_family_version
+  dtype: string
+  nullable: false
+  description: Версия набора label
+- field_name: row_valid_flag
+  dtype: bool
+  nullable: false
+  description: Валидность строки
+- field_name: row_drop_reason
+  dtype: string
+  nullable: true
+  description: Причина отброса
+oof_predictions:
+- field_name: date
+  dtype: date
+  nullable: false
+  description: Дата прогноза
+- field_name: security_id
+  dtype: string
+  nullable: false
+  description: Бумага
+- field_name: fold_id
+  dtype: string
+  nullable: false
+  description: Фолд
+- field_name: model_name
+  dtype: string
+  nullable: false
+  description: Модель
+- field_name: raw_prediction
+  dtype: float64
+  nullable: true
+  description: Сырой score
+- field_name: rank_prediction
+  dtype: float64
+  nullable: true
+  description: Ранг/процентиль
+- field_name: bucket_prediction
+  dtype: int32
+  nullable: true
+  description: Бакет score
+- field_name: prediction_timestamp
+  dtype: timestamp
+  nullable: false
+  description: Время генерации
+- field_name: dataset_version
+  dtype: string
+  nullable: false
+  description: Версия датасета
+- field_name: config_hash
+  dtype: string
+  nullable: false
+  description: Хеш конфига
+portfolio_daily_state:
+- field_name: date
+  dtype: date
+  nullable: false
+  description: Дата
+- field_name: gross_exposure
+  dtype: float64
+  nullable: false
+  description: Валовая экспозиция
+- field_name: net_exposure
+  dtype: float64
+  nullable: false
+  description: Чистая экспозиция
+- field_name: turnover
+  dtype: float64
+  nullable: false
+  description: Дневной turnover
+- field_name: gross_pnl
+  dtype: float64
+  nullable: false
+  description: Валовый PnL
+- field_name: net_pnl
+  dtype: float64
+  nullable: false
+  description: Чистый PnL
+- field_name: commission_cost
+  dtype: float64
+  nullable: false
+  description: Комиссии
+- field_name: spread_cost
+  dtype: float64
+  nullable: false
+  description: Издержки спреда
+- field_name: slippage_cost
+  dtype: float64
+  nullable: false
+  description: Слиппедж
+- field_name: impact_cost
+  dtype: float64
+  nullable: false
+  description: Импакт
+- field_name: borrow_cost
+  dtype: float64
+  nullable: false
+  description: Borrow
+- field_name: active_positions
+  dtype: int32
+  nullable: false
+  description: Число позиций
+- field_name: aum
+  dtype: float64
+  nullable: false
+  description: Текущее AUM
+capacity_results:
+- field_name: aum_level
+  dtype: float64
+  nullable: false
+  description: Уровень AUM
+- field_name: scenario
+  dtype: string
+  nullable: false
+  description: Сценарий participation
+- field_name: net_sharpe
+  dtype: float64
+  nullable: true
+  description: Net Sharpe
+- field_name: median_participation
+  dtype: float64
+  nullable: true
+  description: Медианное участие в ADV
+- field_name: p95_participation
+  dtype: float64
+  nullable: true
+  description: 95-й перцентиль участия
+- field_name: fraction_trades_clipped
+  dtype: float64
+  nullable: true
+  description: Доля обрезанных сделок
+- field_name: fraction_names_untradable
+  dtype: float64
+  nullable: true
+  description: Доля неторгуемых имен

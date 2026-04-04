@@ -1,0 +1,144 @@
+from __future__ import annotations
+
+import numpy as np
+import pandas as pd
+import pytest
+
+from alpha_research.models.baselines import (
+    LassoRegressionModel,
+    ModelArtifact,
+    RidgeRegressionModel,
+    deserialize_model,
+)
+from alpha_research.training.oof import ModelRunSpec, generate_oof_predictions
+from alpha_research.splits.engine import generate_walk_forward_splits
+from alpha_research.config.models import SplitsConfig
+from tests.helpers.model_data import build_model_research_bundle
+
+
+def _split_config() -> SplitsConfig:
+    return SplitsConfig(
+        train_years=1,
+        validation_months=2,
+        test_months=1,
+        step_months=1,
+        expanding_train=False,
+        purge_days=5,
+        embargo_days=5,
+        nested_validation=True,
+        min_train_observations=1,
+        persist_fold_artifacts=True,
+    )
+
+
+def _rank_ic_mean(predictions: pd.DataFrame, panel: pd.DataFrame, label_column: str) -> float:
+    merged = predictions.merge(panel[["date", "security_id", label_column]], on=["date", "security_id"], how="left")
+    scores = []
+    for _, group in merged.groupby("date", sort=False):
+        subset = group[["raw_prediction", label_column]].dropna()
+        if len(subset) < 2:
+            continue
+        corr = subset["raw_prediction"].rank(method="average").corr(subset[label_column].rank(method="average"))
+        if pd.notna(corr):
+            scores.append(float(corr))
+    return float(np.mean(scores)) if scores else float("nan")
+
+
+def test_random_baseline_has_near_zero_predictive_skill_on_sanity_fixture() -> None:
+    bundle = build_model_research_bundle()
+    folds = generate_walk_forward_splits(bundle.panel, _split_config(), bundle.calendar, primary_horizon_days=5).folds
+    result = generate_oof_predictions(
+        bundle.panel,
+        folds,
+        model_specs=[ModelRunSpec(name="random_score", seed=7)],
+        feature_columns=bundle.feature_columns,
+        label_column=bundle.label_column,
+        dataset_version="ds_random",
+    )
+    metric = _rank_ic_mean(result.predictions, bundle.panel, bundle.label_column)
+    assert abs(metric) < 0.15
+
+
+def test_heuristic_baseline_runs_end_to_end() -> None:
+    bundle = build_model_research_bundle()
+    folds = generate_walk_forward_splits(bundle.panel, _split_config(), bundle.calendar, primary_horizon_days=5).folds
+    result = generate_oof_predictions(
+        bundle.panel,
+        folds,
+        model_specs=[ModelRunSpec(name="heuristic_blend_score")],
+        feature_columns=bundle.feature_columns,
+        label_column=bundle.label_column,
+        dataset_version="ds_heuristic",
+    )
+    assert not result.predictions.empty
+    assert set(result.predictions["model_name"]) == {"heuristic_blend_score"}
+
+
+def test_ridge_and_lasso_wrappers_are_serializable() -> None:
+    bundle = build_model_research_bundle()
+    train = bundle.panel.iloc[:200].copy()
+    ridge = RidgeRegressionModel(alpha=0.5).fit(train, bundle.feature_columns, bundle.label_column)
+    lasso = LassoRegressionModel(alpha=0.01).fit(train, bundle.feature_columns, bundle.label_column)
+
+    ridge_loaded = deserialize_model(ridge.to_artifact())
+    lasso_loaded = deserialize_model(lasso.to_artifact())
+    sample = train.iloc[:20].copy()
+    np.testing.assert_allclose(ridge.predict(sample), ridge_loaded.predict(sample))
+    np.testing.assert_allclose(lasso.predict(sample), lasso_loaded.predict(sample))
+
+
+def test_tuning_engine_does_not_touch_test_fold() -> None:
+    bundle = build_model_research_bundle()
+    folds = generate_walk_forward_splits(bundle.panel, _split_config(), bundle.calendar, primary_horizon_days=5).folds
+    original = generate_oof_predictions(
+        bundle.panel,
+        folds[:1],
+        model_specs=[ModelRunSpec(name="ridge_regression", alpha_grid=(0.01, 0.1, 1.0))],
+        feature_columns=bundle.feature_columns,
+        label_column=bundle.label_column,
+        dataset_version="ds_tune",
+        prediction_timestamp="2026-01-01T00:00:00Z",
+    )
+
+    mutated_panel = bundle.panel.copy()
+    test_dates = list(folds[0].test_dates)
+    mutated_panel.loc[mutated_panel["date"].isin(test_dates), bundle.label_column] = 999.0
+    mutated = generate_oof_predictions(
+        mutated_panel,
+        folds[:1],
+        model_specs=[ModelRunSpec(name="ridge_regression", alpha_grid=(0.01, 0.1, 1.0))],
+        feature_columns=bundle.feature_columns,
+        label_column=bundle.label_column,
+        dataset_version="ds_tune",
+        prediction_timestamp="2026-01-01T00:00:00Z",
+    )
+    pd.testing.assert_frame_equal(original.predictions, mutated.predictions)
+
+
+def test_oof_prediction_store_is_unique_by_date_security_model() -> None:
+    bundle = build_model_research_bundle()
+    folds = generate_walk_forward_splits(bundle.panel, _split_config(), bundle.calendar, primary_horizon_days=5).folds
+    result = generate_oof_predictions(
+        bundle.panel,
+        folds[:2],
+        model_specs=[ModelRunSpec(name="random_score", seed=11), ModelRunSpec(name="heuristic_momentum_score")],
+        feature_columns=bundle.feature_columns,
+        label_column=bundle.label_column,
+        dataset_version="ds_oof",
+    )
+    assert not result.predictions.duplicated(subset=["date", "security_id", "model_name"]).any()
+
+
+def test_prediction_manifests_contain_coverage_by_fold() -> None:
+    bundle = build_model_research_bundle()
+    folds = generate_walk_forward_splits(bundle.panel, _split_config(), bundle.calendar, primary_horizon_days=5).folds
+    result = generate_oof_predictions(
+        bundle.panel,
+        folds[:2],
+        model_specs=[ModelRunSpec(name="heuristic_reversal_score")],
+        feature_columns=bundle.feature_columns,
+        label_column=bundle.label_column,
+        dataset_version="ds_manifest",
+    )
+    assert result.manifest["coverage_by_fold"]
+    assert set(result.coverage_by_fold.columns) >= {"fold_id", "model_name", "row_count", "unique_dates"}

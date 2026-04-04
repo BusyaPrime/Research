@@ -1,0 +1,16 @@
+mode: decile_equal_weight
+gross_exposure: 1.0
+net_target: 0.0
+long_quantile: 0.1
+short_quantile: 0.1
+rebalance_frequency: daily
+holding_period_days: 5
+overlap_sleeves: true
+max_weight_per_name: 0.02
+max_sector_net_exposure: 0.05
+max_sector_gross_exposure: 0.2
+max_turnover_per_rebalance: 0.25
+beta_neutralize: true
+sector_neutralize: true
+max_participation_pct_adv: 0.01
+reject_unborrowable_shorts: true

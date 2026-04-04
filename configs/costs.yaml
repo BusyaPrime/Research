@@ -1,0 +1,35 @@
+commission_bps: 0.5
+spread_proxy:
+  method: bucket_by_price_and_adv
+  buckets:
+  - price_min: 5
+    price_max: 10
+    adv_bucket: low
+    half_spread_bps: 15
+  - price_min: 10
+    price_max: 25
+    adv_bucket: medium
+    half_spread_bps: 8
+  - price_min: 25
+    price_max: 999999
+    adv_bucket: high
+    half_spread_bps: 3
+slippage_proxy:
+  method: participation_based
+  formula: slippage_bps = base_bps + k1 * sqrt(order_notional / adv_notional)
+  base_bps: 1.0
+  k1: 20.0
+impact_proxy:
+  method: nonlinear_participation
+  formula: impact_bps = k2 * sqrt(order_notional / adv_notional)
+  k2: 15.0
+borrow:
+  low_borrow_bps_daily: 1.0
+  medium_borrow_bps_daily: 5.0
+  high_borrow_bps_daily: 20.0
+  hard_to_borrow_policy: ban_or_extreme_stress
+scenarios:
+- optimistic
+- base
+- stressed
+- severely_stressed

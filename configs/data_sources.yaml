@@ -1,0 +1,45 @@
+market_provider:
+  name: adapter_placeholder
+  priority:
+  - institutional_vendor
+  - polygon_like
+  - alpha_vantage_like
+  fields_required:
+  - open
+  - high
+  - low
+  - close
+  - adj_close
+  - volume
+  - symbol
+  - trade_date
+  save_raw_payload: true
+  save_request_manifest: true
+fundamentals_provider:
+  name: sec_or_vendor_adapter
+  fields_required:
+  - filing_date
+  - acceptance_datetime
+  - fiscal_period_end
+  - metric_name
+  - metric_value
+  - form_type
+  - company_id
+  available_from_policy: max(acceptance_datetime, filing_date_end_of_day)
+  restatement_tracking: true
+corporate_actions_provider:
+  required_events:
+  - split
+  - dividend
+  - delisting
+  - symbol_change
+  save_raw_payload: true
+security_master_provider:
+  required_fields:
+  - security_id
+  - symbol
+  - listing_date
+  - delisting_date
+  - exchange
+  - security_type
+  ticker_is_not_primary_key: true

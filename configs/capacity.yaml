@@ -1,0 +1,21 @@
+aum_ladder_usd:
+- 1000000
+- 5000000
+- 10000000
+- 25000000
+- 50000000
+- 100000000
+- 250000000
+- 500000000
+- 1000000000
+participation_limits:
+  relaxed: 0.02
+  base: 0.01
+  strict: 0.005
+  ultra_strict: 0.0025
+report_metrics:
+- net_sharpe
+- max_participation
+- median_participation
+- fraction_trades_clipped
+- fraction_names_untradable

@@ -1,0 +1,23 @@
+feature_registry_version: v1
+families_enabled:
+- returns
+- relative_returns
+- volatility
+- liquidity
+- trend_state
+- cross_sectional_context
+- fundamentals
+- staleness_flags
+- interactions
+default_cross_section_normalization: rank_gaussian_optional_else_percentile
+default_missing_policy: add_missing_flag_plus_impute_by_sector_median_for_linear_models
+default_winsor_policy:
+  lower_pct: 0.5
+  upper_pct: 99.5
+default_neutralization: sector_and_beta
+fundamental_staleness_thresholds_days:
+- 45
+- 90
+- 180
+- 365
+interaction_cap: 25

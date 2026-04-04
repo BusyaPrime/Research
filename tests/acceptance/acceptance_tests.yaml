@@ -1,0 +1,756 @@
+- test_id: TEST-01-01
+  group: config_validation
+  title: Невалидный project.yaml отклоняется schema validator-ом
+  type: unit
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-01-02
+  group: config_validation
+  title: Hash конфига меняется при изменении любого параметра
+  type: unit
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-01-03
+  group: config_validation
+  title: Experiment config сохраняет snapshot без потери полей
+  type: unit
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-01-04
+  group: config_validation
+  title: CLI dry-run печатает resolved config без запуска side effects
+  type: unit
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-01-05
+  group: config_validation
+  title: Отсутствующий mandatory field вызывает fail-fast
+  type: unit
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-01-06
+  group: config_validation
+  title: Unknown extra field помечается warn или fail по policy
+  type: unit
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-02-01
+  group: calendar_and_time
+  title: next_trading_day пропускает выходные и праздники
+  type: unit
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-02-02
+  group: calendar_and_time
+  title: trading_day_distance корректен на диапазонах с праздниками
+  type: unit
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-02-03
+  group: calendar_and_time
+  title: label horizon использует торговые, а не календарные дни
+  type: unit
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-02-04
+  group: calendar_and_time
+  title: decision timestamp всегда раньше execution timestamp
+  type: unit
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-02-05
+  group: calendar_and_time
+  title: same-bar execution baseline guard срабатывает при нарушении
+  type: unit
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-02-06
+  group: calendar_and_time
+  title: timestamp alignment tests ловят неверный start-of-label window
+  type: unit
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-03-01
+  group: market_ingest
+  title: Raw payload сохраняется без мутаций
+  type: unit
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-03-02
+  group: market_ingest
+  title: Request manifest создается для каждого batch
+  type: unit
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-03-03
+  group: market_ingest
+  title: Повторный ingest не ломает idempotency policy
+  type: unit
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-03-04
+  group: market_ingest
+  title: Pagination не теряет страницы данных
+  type: unit
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-03-05
+  group: market_ingest
+  title: Provider-side missing symbols логируются отдельно
+  type: unit
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-03-06
+  group: market_ingest
+  title: Bronze schema валидируется после ingest
+  type: unit
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-04-01
+  group: fundamentals_ingest
+  title: available_from рассчитывается по policy
+  type: unit
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-04-02
+  group: fundamentals_ingest
+  title: fiscal_period_end не используется как available_from
+  type: unit
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-04-03
+  group: fundamentals_ingest
+  title: Restatement помечается отдельным флагом
+  type: unit
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-04-04
+  group: fundamentals_ingest
+  title: Duplicate facts выявляются и логируются
+  type: unit
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-04-05
+  group: fundamentals_ingest
+  title: Canonical metric names маппятся детерминированно
+  type: unit
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-04-06
+  group: fundamentals_ingest
+  title: Bronze fundamentals schema валидируется
+  type: unit
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-05-01
+  group: corporate_actions
+  title: Split ratios загружаются и нормализуются
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-05-02
+  group: corporate_actions
+  title: Dividend events присоединяются к security_id
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-05-03
+  group: corporate_actions
+  title: Delisting events попадают в canonical layer
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-05-04
+  group: corporate_actions
+  title: Symbol changes не теряются при нормализации
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-05-05
+  group: corporate_actions
+  title: Corporate actions manifest содержит row counts
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-05-06
+  group: corporate_actions
+  title: Invalid corporate action rows помечаются failed extract-ом
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-06-01
+  group: market_qa
+  title: OHLC logical consistency check ловит high < low
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-06-02
+  group: market_qa
+  title: Negative volume детектируется как invalid
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-06-03
+  group: market_qa
+  title: Duplicate rows детектируются по security_id-date
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-06-04
+  group: market_qa
+  title: Missing trading day объясняется календарем либо flagged
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-06-05
+  group: market_qa
+  title: Extreme price jumps без action explanation flagged
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-06-06
+  group: market_qa
+  title: Data quality score рассчитывается и сохраняется
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-07-01
+  group: fundamentals_qa
+  title: Непарсируемый metric value flagged
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-07-02
+  group: fundamentals_qa
+  title: Невалидный metric unit flagged
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-07-03
+  group: fundamentals_qa
+  title: Impossible timestamps flagged
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-07-04
+  group: fundamentals_qa
+  title: Completeness by metric/year рассчитывается
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-07-05
+  group: fundamentals_qa
+  title: Staleness diagnostics считаются корректно
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-07-06
+  group: fundamentals_qa
+  title: Fundamental QA report генерируется без пропуска секций
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-08-01
+  group: pit_engine
+  title: As-of join не выбирает future row
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-08-02
+  group: pit_engine
+  title: При отсутствии доступного факта возвращается null
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-08-03
+  group: pit_engine
+  title: При наличии нескольких фактов берется максимальный available_from <= date
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-08-04
+  group: pit_engine
+  title: Restated fact не утекает в прошлое
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-08-05
+  group: pit_engine
+  title: Source timestamp сохраняется после PIT join
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-08-06
+  group: pit_engine
+  title: PIT diagnostics report показывает coverage и null ratios
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-09-01
+  group: universe
+  title: Security type filter исключает ETF/ADR/OTC
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-09-02
+  group: universe
+  title: Listing/delisting filter уважает дату среза
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-09-03
+  group: universe
+  title: Min price filter работает по point-in-time price
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-09-04
+  group: universe
+  title: Min ADV filter работает по point-in-time ADV20
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-09-05
+  group: universe
+  title: Exclusion reasons логируются детерминированно
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-09-06
+  group: universe
+  title: Universe snapshots воспроизводимы на фиксированном датасете
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-10-01
+  group: labels
+  title: Open-to-open 1d label начинается после execution timestamp
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-10-02
+  group: labels
+  title: Open-to-open 5d label использует trading-day offsets
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-10-03
+  group: labels
+  title: Benchmark excess label корректно вычитает benchmark return
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-10-04
+  group: labels
+  title: Residual label использует только control variables текущей даты
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-10-05
+  group: labels
+  title: Overlap policy сигнализирует нужный purge horizon
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-10-06
+  group: labels
+  title: Label sanity report строится по всем horizons
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-11-01
+  group: features_price
+  title: ret_21 соответствует формуле close_t/close_t-21 - 1
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-11-02
+  group: features_price
+  title: mom_21_ex1 исключает последний день
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-11-03
+  group: features_price
+  title: rev_1 равен отрицанию ret_1
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-11-04
+  group: features_price
+  title: ex_bench_21 корректно вычитает benchmark
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-11-05
+  group: features_price
+  title: cs_rank_ret_21 считается внутри даты
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-11-06
+  group: features_price
+  title: Feature registry содержит metadata для price family
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-12-01
+  group: features_vol_liq
+  title: vol_21 использует std log returns
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-12-02
+  group: features_vol_liq
+  title: parkinson_21 соответствует range-based formula
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-12-03
+  group: features_vol_liq
+  title: adv20 равен среднему dollar volume за 20 дней
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-12-04
+  group: features_vol_liq
+  title: volume_surprise_20 использует только прошлые дни
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-12-05
+  group: features_vol_liq
+  title: amihud_21 корректно обращается с нулевым volume
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-12-06
+  group: features_vol_liq
+  title: Trend features генерируются без future leakage
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-13-01
+  group: features_fundamentals
+  title: book_to_price использует PIT book equity и market cap
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-13-02
+  group: features_fundamentals
+  title: roe использует average book equity policy
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-13-03
+  group: features_fundamentals
+  title: sales_growth_yoy использует last available PIT values
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-13-04
+  group: features_fundamentals
+  title: days_since_last_filing считается по trading calendar
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-13-05
+  group: features_fundamentals
+  title: missingness flags выставляются корректно
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-13-06
+  group: features_fundamentals
+  title: Interaction features подчиняются interaction cap policy
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-14-01
+  group: preprocessing
+  title: Winsorizer не использует test fold при fit
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-14-02
+  group: preprocessing
+  title: Z-score scaler считается по cross-section даты
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-14-03
+  group: preprocessing
+  title: Robust z-score scaler устойчив к outliers
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-14-04
+  group: preprocessing
+  title: Sector neutralization не ломает индекс строк
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-14-05
+  group: preprocessing
+  title: Beta neutralization использует корректный beta input
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-14-06
+  group: preprocessing
+  title: Fold-safe preprocessing API не имеет test contamination
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-15-01
+  group: dataset_assembly
+  title: Silver market и fundamentals собираются в gold panel
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-15-02
+  group: dataset_assembly
+  title: Rows без universe membership помечаются корректно
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-15-03
+  group: dataset_assembly
+  title: Row-level diagnostics содержат drop reason
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-15-04
+  group: dataset_assembly
+  title: Dataset manifest содержит row_count and feature_count
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-15-05
+  group: dataset_assembly
+  title: Feature coverage ratio считается детерминированно
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-15-06
+  group: dataset_assembly
+  title: Gold dataset пишется в parquet с версией
+  type: integration
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-16-01
+  group: splits
+  title: Rolling split generator создает train/valid/test без overlap
+  type: system
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-16-02
+  group: splits
+  title: Expanding split option увеличивает train window
+  type: system
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-16-03
+  group: splits
+  title: Purge logic убирает пересекающиеся label windows
+  type: system
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-16-04
+  group: splits
+  title: Embargo logic убирает близкие boundary observations
+  type: system
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-16-05
+  group: splits
+  title: Fold metadata сохраняется как artifact
+  type: system
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-16-06
+  group: splits
+  title: Validation protocol report содержит timeline plot
+  type: system
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-17-01
+  group: models_and_oof
+  title: Random baseline дает near-zero predictive skill на sanity fixture
+  type: system
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-17-02
+  group: models_and_oof
+  title: Heuristic baseline запускается end-to-end
+  type: system
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-17-03
+  group: models_and_oof
+  title: Ridge/Lasso wrappers сериализуются
+  type: system
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-17-04
+  group: models_and_oof
+  title: Tuning engine не трогает test fold
+  type: system
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-17-05
+  group: models_and_oof
+  title: OOF prediction store уникален по date-security-model
+  type: system
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-17-06
+  group: models_and_oof
+  title: Prediction manifests содержат coverage by fold
+  type: system
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-18-01
+  group: portfolio_and_execution
+  title: Score-to-rank mapping монотонен
+  type: system
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-18-02
+  group: portfolio_and_execution
+  title: Equal-weight decile portfolio соблюдает gross target
+  type: system
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-18-03
+  group: portfolio_and_execution
+  title: Sector caps enforce-ятся при target weight construction
+  type: system
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-18-04
+  group: portfolio_and_execution
+  title: Participation cap режет слишком крупные сделки
+  type: system
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-18-05
+  group: portfolio_and_execution
+  title: Trade list строится из previous holdings и target weights
+  type: system
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-18-06
+  group: portfolio_and_execution
+  title: Next-open execution simulator пишет fill ratios
+  type: system
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-19-01
+  group: costs_backtest_capacity
+  title: Commission model начисляет bps на executed notional
+  type: system
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-19-02
+  group: costs_backtest_capacity
+  title: Spread proxy использует bucket policy
+  type: system
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-19-03
+  group: costs_backtest_capacity
+  title: Borrow model начисляет cost только на shorts
+  type: system
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-19-04
+  group: costs_backtest_capacity
+  title: Backtest state machine обновляет holdings ежедневно
+  type: system
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-19-05
+  group: costs_backtest_capacity
+  title: AUM ladder runner генерирует результаты на всех уровнях капитала
+  type: system
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-19-06
+  group: costs_backtest_capacity
+  title: Capacity outputs содержат fraction_trades_clipped и net_sharpe
+  type: system
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-20-01
+  group: evaluation_reporting
+  title: Predictive metrics suite считает IC и rank IC
+  type: system
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-20-02
+  group: evaluation_reporting
+  title: Portfolio metrics suite считает Sharpe and max drawdown
+  type: system
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-20-03
+  group: evaluation_reporting
+  title: Regime analysis suite считает метрики по режимам
+  type: system
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-20-04
+  group: evaluation_reporting
+  title: Decay suite строит response curve по horizons
+  type: system
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-20-05
+  group: evaluation_reporting
+  title: Final report generator включает все mandatory sections
+  type: system
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-20-06
+  group: evaluation_reporting
+  title: Executive summary template содержит limitations и next steps
+  type: system
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-21-01
+  group: leakage_and_release
+  title: Leakage test ловит future feature timestamp
+  type: system
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-21-02
+  group: leakage_and_release
+  title: Leakage test ловит scaler-on-all-data misuse
+  type: system
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-21-03
+  group: leakage_and_release
+  title: Leakage test ловит same-bar execution misuse
+  type: system
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-21-04
+  group: leakage_and_release
+  title: Regression tests на fixture dataset проходят стабильно
+  type: system
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-21-05
+  group: leakage_and_release
+  title: CI pipeline падает при провале unit/integration/leakage tests
+  type: system
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker
+- test_id: TEST-21-06
+  group: leakage_and_release
+  title: Release checklist требует manifests, reports и review bundle
+  type: system
+  expected_result: PASS
+  failure_mode_if_broken: pipeline_stop_or_release_blocker

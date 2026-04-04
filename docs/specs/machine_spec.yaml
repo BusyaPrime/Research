@@ -1,0 +1,230 @@
+spec_version: '1.0'
+project:
+  name: alpha_research_platform
+  scope: daily_cross_sectional_us_equities_alpha_research
+  language: ru
+  primary_use: master_spec_for_engineering_agent
+global_invariants:
+- future_data_forbidden
+- point_in_time_required
+- test_fold_is_never_touched_during_fit_or_tuning
+- execution_on_same_bar_is_forbidden_in_baseline
+- out_of_fold_predictions_only_for_backtest
+stage_dag:
+- stage_id: S00
+  name: bootstrap
+  inputs: []
+  outputs:
+  - repo
+  - configs
+  - tooling
+- stage_id: S01
+  name: reference_data
+  inputs:
+  - security_master_raw
+  outputs:
+  - security_master_silver
+- stage_id: S02
+  name: market_ingest
+  inputs:
+  - provider_market_api
+  outputs:
+  - raw_market
+  - bronze_market
+- stage_id: S03
+  name: fundamentals_ingest
+  inputs:
+  - provider_fundamentals_api
+  outputs:
+  - raw_fundamentals
+  - bronze_fundamentals
+- stage_id: S04
+  name: corporate_actions
+  inputs:
+  - provider_ca_api
+  outputs:
+  - bronze_corporate_actions
+- stage_id: S05
+  name: qa
+  inputs:
+  - bronze_market
+  - bronze_fundamentals
+  - bronze_corporate_actions
+  outputs:
+  - qa_reports
+  - silver_inputs
+- stage_id: S06
+  name: pit
+  inputs:
+  - silver_inputs
+  - security_master_silver
+  outputs:
+  - silver_market_pit
+  - silver_fundamentals_pit
+- stage_id: S07
+  name: universe
+  inputs:
+  - silver_market_pit
+  - security_master_silver
+  outputs:
+  - universe_snapshots
+- stage_id: S08
+  name: features_labels
+  inputs:
+  - silver_market_pit
+  - silver_fundamentals_pit
+  - universe_snapshots
+  outputs:
+  - feature_layer
+  - label_layer
+- stage_id: S09
+  name: gold_panel
+  inputs:
+  - feature_layer
+  - label_layer
+  outputs:
+  - gold_model_panel
+  - dataset_manifest
+- stage_id: S10
+  name: splits
+  inputs:
+  - gold_model_panel
+  outputs:
+  - folds
+- stage_id: S11
+  name: training
+  inputs:
+  - gold_model_panel
+  - folds
+  outputs:
+  - models
+  - oof_predictions
+- stage_id: S12
+  name: portfolio
+  inputs:
+  - oof_predictions
+  - universe_snapshots
+  outputs:
+  - target_weights
+  - trades
+- stage_id: S13
+  name: execution_backtest
+  inputs:
+  - trades
+  - silver_market_pit
+  outputs:
+  - daily_state
+  - holdings
+  - net_returns
+- stage_id: S14
+  name: capacity
+  inputs:
+  - daily_state
+  outputs:
+  - capacity_results
+- stage_id: S15
+  name: evaluation_reporting
+  inputs:
+  - oof_predictions
+  - daily_state
+  - capacity_results
+  outputs:
+  - metrics
+  - figures
+  - final_report
+modules:
+  common:
+  - logging
+  - config
+  - paths
+  - hashing
+  - manifest_helpers
+  data:
+  - providers
+  - bronze_normalizers
+  - qa
+  pit:
+  - asof_join
+  - interval_builder
+  - timestamp_guards
+  universe:
+  - filters
+  - snapshots
+  - exclusion_codes
+  labels:
+  - raw
+  - excess
+  - residual
+  - quantile
+  features:
+  - returns
+  - volatility
+  - liquidity
+  - trend
+  - fundamentals
+  - interactions
+  preprocessing:
+  - winsor
+  - scale
+  - neutralize
+  - missing
+  splits:
+  - rolling
+  - expanding
+  - purge
+  - embargo
+  models:
+  - baselines
+  - linear
+  - trees
+  - ranking
+  - tuning
+  portfolio:
+  - score_to_rank
+  - constraints
+  - weights
+  - rejections
+  execution:
+  - trade_generation
+  - fills
+  - costs
+  backtest:
+  - state_machine
+  - pnl
+  - attribution
+  evaluation:
+  - predictive
+  - portfolio
+  - regime
+  - decay
+  - capacity
+  reporting:
+  - tables
+  - plots
+  - final_report
+artifacts_required:
+- dataset_manifest
+- feature_registry_snapshot
+- fold_metadata
+- oof_predictions
+- holdings_snapshots
+- daily_portfolio_state
+- capacity_results
+- figures
+- final_report
+cli_commands:
+- ingest-market
+- ingest-fundamentals
+- ingest-corporate-actions
+- build-reference
+- build-silver
+- build-universe
+- build-features
+- build-labels
+- build-gold
+- run-train
+- run-predict-oof
+- run-backtest
+- run-capacity
+- run-report
+- run-full-pipeline

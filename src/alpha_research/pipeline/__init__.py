@@ -1,0 +1,1 @@
+"""Pipeline command registry."""

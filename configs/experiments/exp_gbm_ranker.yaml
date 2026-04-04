@@ -1,0 +1,14 @@
+experiment_name: gbm_ranker_excess_5d
+dataset_version: gold_latest
+label: label_excess_5d_oo
+featureset: all_features_v1
+preprocessing:
+  winsor: p0_5_p99_5
+  scaler: percentile_rank_by_date
+  neutralizer: sector_plus_beta
+model:
+  name: gradient_boosting_ranker
+  n_trials: 50
+portfolio:
+  mode: rank_weighted
+cost_scenario: base

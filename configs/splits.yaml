@@ -1,0 +1,10 @@
+train_years: 5
+validation_months: 12
+test_months: 3
+step_months: 3
+expanding_train: false
+purge_days: 5
+embargo_days: 5
+nested_validation: true
+min_train_observations: 100000
+persist_fold_artifacts: true
