@@ -25,6 +25,7 @@ from alpha_research.config.models import (
     ProjectConfig,
     ReportingConfig,
     ResolvedConfigBundle,
+    RuntimeConfig,
     SplitsConfig,
     UniverseConfig,
 )
@@ -56,6 +57,7 @@ CONFIG_FILE_MODELS: dict[str, type[BaseModel]] = {
     "costs.yaml": CostsConfig,
     "capacity.yaml": CapacityConfig,
     "reporting.yaml": ReportingConfig,
+    "runtime.yaml": RuntimeConfig,
 }
 
 

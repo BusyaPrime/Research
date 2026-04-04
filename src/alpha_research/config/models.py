@@ -242,6 +242,18 @@ class ReportingConfig(FrozenModel):
     mandatory_figures: list[str]
 
 
+class RuntimeIngestConfig(FrozenModel):
+    provider_mode: Literal["synthetic_vendor_stub"]
+    default_start_date: str
+    default_end_date: str
+    default_n_securities: int
+    page_size: int
+
+
+class RuntimeConfig(FrozenModel):
+    ingest: RuntimeIngestConfig
+
+
 class ExperimentPreprocessingConfig(FrozenModel):
     winsor: str
     scaler: str
@@ -284,4 +296,5 @@ class ResolvedConfigBundle(FrozenModel):
     costs: CostsConfig
     capacity: CapacityConfig
     reporting: ReportingConfig
+    runtime: RuntimeConfig
     experiments: dict[str, ExperimentConfig]

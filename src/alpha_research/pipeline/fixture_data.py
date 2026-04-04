@@ -43,6 +43,7 @@ class SyntheticResearchBundle:
     calendar: ExchangeCalendarAdapter
     security_master: pd.DataFrame
     silver_market: pd.DataFrame
+    bronze_fundamentals: pd.DataFrame
     silver_fundamentals: pd.DataFrame
     benchmark_market: pd.DataFrame
     notes: list[str]
@@ -165,7 +166,7 @@ def _fundamental_value_map(security_idx: int, quarter_idx: int) -> dict[str, flo
     }
 
 
-def _build_fundamentals_frame(dates: pd.DatetimeIndex, security_master: pd.DataFrame) -> pd.DataFrame:
+def _build_fundamentals_frame(dates: pd.DatetimeIndex, security_master: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     available_dates = dates[20::63]
     rows: list[dict[str, object]] = []
     for idx, security in enumerate(security_master.itertuples(index=False)):
@@ -198,7 +199,9 @@ def _build_fundamentals_frame(dates: pd.DatetimeIndex, security_master: pd.DataF
                         "data_version": "synthetic_fixture_v1",
                     }
                 )
-    return build_silver_fundamentals_pit(pd.DataFrame(rows))
+    bronze_fundamentals = pd.DataFrame(rows)
+    silver_fundamentals = build_silver_fundamentals_pit(bronze_fundamentals)
+    return bronze_fundamentals, silver_fundamentals
 
 
 def build_synthetic_research_bundle(
@@ -213,7 +216,7 @@ def build_synthetic_research_bundle(
     security_master = _build_security_master_frame(n_securities)
     benchmark_market, benchmark_returns = _build_benchmark_market(dates)
     silver_market = _build_market_frame(dates, security_master, benchmark_returns, seed)
-    silver_fundamentals = _build_fundamentals_frame(dates, security_master)
+    bronze_fundamentals, silver_fundamentals = _build_fundamentals_frame(dates, security_master)
     notes = [
         "TEMPORARY SIMPLIFICATION: operational pipeline uses deterministic synthetic data until real vendor adapters are configured.",
         "Synthetic bundle preserves time semantics, PIT available_from rules, OOF discipline, and artifact reproducibility contracts.",
@@ -222,6 +225,7 @@ def build_synthetic_research_bundle(
         calendar=calendar,
         security_master=security_master,
         silver_market=silver_market,
+        bronze_fundamentals=bronze_fundamentals,
         silver_fundamentals=silver_fundamentals,
         benchmark_market=benchmark_market,
         notes=notes,
