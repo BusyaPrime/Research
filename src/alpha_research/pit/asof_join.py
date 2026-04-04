@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+import numpy as np
 import pandas as pd
 
 
@@ -70,18 +71,14 @@ def pit_join_fundamentals(
 
     for metric in metrics:
         metric_facts = right[right["metric_name_canonical"] == metric].copy()
-        metric_results: list[pd.DataFrame] = []
+        metric_values = pd.Series(np.nan, index=output["_row_id"], dtype="float64")
+        available_from_values = pd.Series(pd.NaT, index=output["_row_id"], dtype="datetime64[ns, UTC]")
+        staleness_values = pd.Series(pd.NA, index=output["_row_id"], dtype="Int32")
         for security_id, left_group in output[["_row_id", "security_id", as_of_column]].groupby("security_id", sort=False):
             left_sorted = left_group.sort_values(as_of_column, kind="stable")
             facts_sorted = metric_facts.loc[metric_facts["security_id"] == security_id].sort_values("available_from", kind="stable")
 
             if facts_sorted.empty:
-                empty = left_sorted.copy()
-                empty["metric_value"] = pd.NA
-                empty["available_from"] = pd.NaT
-                empty["available_to"] = pd.NaT
-                empty["staleness_days"] = pd.Series(pd.NA, index=empty.index, dtype="Int32")
-                metric_results.append(empty)
                 continue
 
             merged = pd.merge_asof(
@@ -94,16 +91,19 @@ def pit_join_fundamentals(
             )
 
             invalid = merged["available_to"].notna() & (merged[as_of_column] >= merged["available_to"])
-            merged.loc[invalid, ["metric_value", "available_from", "available_to"]] = [pd.NA, pd.NaT, pd.NaT]
+            merged.loc[invalid, "metric_value"] = np.nan
+            merged.loc[invalid, ["available_from", "available_to"]] = [pd.NaT, pd.NaT]
             merged["staleness_days"] = (
                 merged[as_of_column].dt.normalize() - pd.to_datetime(merged["available_from"], errors="coerce", utc=True).dt.normalize()
             ).dt.days.astype("Int32")
-            metric_results.append(merged)
+            row_ids = merged["_row_id"].to_numpy()
+            metric_values.loc[row_ids] = pd.to_numeric(merged["metric_value"], errors="coerce").to_numpy()
+            available_from_values.loc[row_ids] = merged["available_from"].to_numpy()
+            staleness_values.loc[row_ids] = merged["staleness_days"].to_numpy()
 
-        metric_frame = pd.concat(metric_results, ignore_index=True).set_index("_row_id").sort_index()
-        output[metric] = metric_frame["metric_value"].reindex(output["_row_id"]).values
-        output[f"source_available_from__{metric}"] = metric_frame["available_from"].reindex(output["_row_id"]).reset_index(drop=True)
-        output[f"staleness_days__{metric}"] = metric_frame["staleness_days"].reindex(output["_row_id"]).reset_index(drop=True)
+        output[metric] = metric_values.reindex(output["_row_id"]).to_numpy()
+        output[f"source_available_from__{metric}"] = available_from_values.reindex(output["_row_id"]).reset_index(drop=True)
+        output[f"staleness_days__{metric}"] = staleness_values.reindex(output["_row_id"]).reset_index(drop=True)
 
     return output.drop(columns="_row_id").reset_index(drop=True)
 

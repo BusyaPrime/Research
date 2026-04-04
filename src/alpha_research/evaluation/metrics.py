@@ -6,6 +6,21 @@ import numpy as np
 import pandas as pd
 
 
+def _safe_corr(left: pd.Series, right: pd.Series) -> float:
+    paired = pd.concat(
+        [
+            pd.to_numeric(left, errors="coerce").rename("left"),
+            pd.to_numeric(right, errors="coerce").rename("right"),
+        ],
+        axis=1,
+    ).dropna()
+    if len(paired) < 2:
+        return float("nan")
+    if paired["left"].std(ddof=0) <= 1e-12 or paired["right"].std(ddof=0) <= 1e-12:
+        return float("nan")
+    return float(paired["left"].corr(paired["right"]))
+
+
 def compute_predictive_metrics(predictions: pd.DataFrame, labels: pd.DataFrame, *, label_column: str) -> pd.DataFrame:
     merged = predictions.merge(labels[["date", "security_id", label_column]], on=["date", "security_id"], how="left")
     rows: list[dict[str, float | pd.Timestamp]] = []
@@ -15,8 +30,8 @@ def compute_predictive_metrics(predictions: pd.DataFrame, labels: pd.DataFrame, 
             ic = np.nan
             rank_ic = np.nan
         else:
-            ic = float(subset["raw_prediction"].corr(subset[label_column]))
-            rank_ic = float(subset["raw_prediction"].rank(method="average").corr(subset[label_column].rank(method="average")))
+            ic = _safe_corr(subset["raw_prediction"], subset[label_column])
+            rank_ic = _safe_corr(subset["raw_prediction"].rank(method="average"), subset[label_column].rank(method="average"))
         rows.append({"date": pd.Timestamp(date), "ic": ic, "rank_ic": rank_ic})
     metrics = pd.DataFrame(rows)
     summary = pd.DataFrame(
@@ -57,7 +72,7 @@ def compute_regime_breakdown(frame: pd.DataFrame, *, prediction_column: str, lab
     rows: list[dict[str, object]] = []
     for regime, group in frame.groupby(regime_column, dropna=False, sort=False):
         subset = group[[prediction_column, label_column]].dropna()
-        metric = float(subset[prediction_column].corr(subset[label_column])) if len(subset) >= 2 else np.nan
+        metric = _safe_corr(subset[prediction_column], subset[label_column])
         rows.append({"regime": regime, "row_count": int(len(group)), "ic": metric})
     return pd.DataFrame(rows)
 

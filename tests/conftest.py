@@ -14,6 +14,18 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 
+COPYTREE_IGNORE = shutil.ignore_patterns("__pycache__", "*.pyc", ".pytest_tmp", ".pytest_cache")
+
+
+def _copy_tree(source: Path, destination: Path) -> None:
+    shutil.copytree(source, destination, ignore=COPYTREE_IGNORE)
+
+
+def _copy_file(source: Path, destination: Path) -> None:
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(source, destination)
+
+
 @pytest.fixture
 def repo_root() -> Path:
     return REPO_ROOT
@@ -24,10 +36,13 @@ def repo_copy(tmp_path: Path, repo_root: Path) -> Path:
     target = tmp_path / "repo"
     target.mkdir()
 
-    for relative in ("configs", "docs", "schemas", "tests", "pseudocode", "backlog"):
-        source = repo_root / relative
-        destination = target / relative
-        shutil.copytree(source, destination)
+    _copy_tree(repo_root / "configs", target / "configs")
+    _copy_tree(repo_root / "schemas", target / "schemas")
+    _copy_tree(repo_root / "pseudocode", target / "pseudocode")
+    _copy_file(repo_root / "backlog" / "backlog.yaml", target / "backlog" / "backlog.yaml")
+    _copy_file(repo_root / "docs" / "specs" / "MASTER_SPEC.md", target / "docs" / "specs" / "MASTER_SPEC.md")
+    _copy_file(repo_root / "docs" / "specs" / "machine_spec.yaml", target / "docs" / "specs" / "machine_spec.yaml")
+    _copy_file(repo_root / "tests" / "acceptance" / "acceptance_tests.yaml", target / "tests" / "acceptance" / "acceptance_tests.yaml")
 
     for relative in ("artifacts", "logs"):
         (target / relative).mkdir(parents=True, exist_ok=True)
@@ -42,10 +57,8 @@ def minimal_repo(tmp_path: Path, repo_root: Path) -> Path:
     target = tmp_path / "workspace"
     target.mkdir()
 
-    for relative in ("configs", "docs", "schemas", "pseudocode", "backlog"):
-        source = repo_root / relative
-        destination = target / relative
-        shutil.copytree(source, destination)
+    _copy_tree(repo_root / "configs", target / "configs")
+    _copy_tree(repo_root / "schemas", target / "schemas")
 
     for relative in ("data", "artifacts", "logs", "reports"):
         (target / relative).mkdir(parents=True, exist_ok=True)
@@ -61,10 +74,9 @@ def workspace_repo_copy(repo_root: Path) -> Path:
     base.mkdir(parents=True, exist_ok=True)
     target = Path(tempfile.mkdtemp(prefix="repo_", dir=base))
 
-    for relative in ("configs", "docs", "schemas", "tests", "pseudocode", "backlog", ".github"):
-        source = repo_root / relative
-        if source.exists():
-            shutil.copytree(source, target / relative)
+    _copy_tree(repo_root / "configs", target / "configs")
+    _copy_tree(repo_root / "schemas", target / "schemas")
+    _copy_file(repo_root / "docs" / "release_checklist.md", target / "docs" / "release_checklist.md")
 
     for relative in ("artifacts", "logs", "reports"):
         (target / relative).mkdir(parents=True, exist_ok=True)

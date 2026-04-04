@@ -6,19 +6,19 @@ from alpha_research.config.models import ReportingConfig
 
 
 SECTION_TITLES = {
-    "executive_summary": "Executive Summary",
-    "time_semantics": "Time Semantics",
-    "data_lineage": "Data Lineage",
-    "feature_catalog": "Feature Catalog",
-    "validation_protocol": "Validation Protocol",
-    "model_comparison": "Model Comparison",
-    "backtest_results": "Backtest Results",
-    "cost_sensitivity": "Cost Sensitivity",
-    "capacity_analysis": "Capacity Analysis",
-    "regime_analysis": "Regime Analysis",
-    "decay_analysis": "Decay Analysis",
-    "limitations": "Limitations",
-    "next_steps": "Next Steps",
+    "executive_summary": "Итог по запуску",
+    "time_semantics": "Временная семантика",
+    "data_lineage": "Происхождение данных",
+    "feature_catalog": "Каталог фич",
+    "validation_protocol": "Схема валидации",
+    "model_comparison": "Сравнение моделей",
+    "backtest_results": "Результаты бэктеста",
+    "cost_sensitivity": "Чувствительность к костам",
+    "capacity_analysis": "Анализ capacity",
+    "regime_analysis": "Анализ по режимам",
+    "decay_analysis": "Анализ затухания сигнала",
+    "limitations": "Ограничения",
+    "next_steps": "Что делать дальше",
 }
 
 
@@ -29,11 +29,11 @@ def render_executive_summary(
     limitations: list[str],
     next_steps: list[str],
 ) -> str:
-    lines = [f"# {project_name}", "", "## Executive Summary", headline, ""]
-    lines.append("### Limitations")
+    lines = [f"# {project_name}", "", "## Итог по запуску", headline, ""]
+    lines.append("### Ограничения")
     lines.extend(f"- {item}" for item in limitations)
     lines.append("")
-    lines.append("### Next Steps")
+    lines.append("### Что делать дальше")
     lines.extend(f"- {item}" for item in next_steps)
     return "\n".join(lines).strip() + "\n"
 
@@ -47,23 +47,23 @@ def render_final_report(
     next_steps: list[str] | None = None,
 ) -> str:
     payloads = dict(section_payloads or {})
-    limitation_items = limitations or ["TEMPORARY SIMPLIFICATION: report content incomplete."]
-    next_step_items = next_steps or ["Implement remaining platform layers and harden artifacts."]
+    limitation_items = limitations or ["TEMPORARY SIMPLIFICATION: отчет пока неполный."]
+    next_step_items = next_steps or ["Добить оставшиеся слои платформы и дожать артефакты до воспроизводимого состояния."]
 
     lines = [f"# {project_name}", ""]
     for section in reporting_config.include_sections:
         title = SECTION_TITLES.get(section, section.replace("_", " ").title())
         lines.append(f"## {title}")
         if section == "executive_summary":
-            lines.append(payloads.get(section, "Alpha research platform report covering predictive and portfolio diagnostics."))
+            lines.append(payloads.get(section, "Отчет по исследовательской платформе с predictive- и portfolio-диагностикой."))
         elif section == "limitations":
             lines.extend(f"- {item}" for item in limitation_items)
         elif section == "next_steps":
             lines.extend(f"- {item}" for item in next_step_items)
         else:
-            lines.append(payloads.get(section, f"Stub section for {title}."))
+            lines.append(payloads.get(section, f"Временный stub для раздела «{title}»."))
         lines.append("")
 
-    lines.append("## Mandatory Figures")
+    lines.append("## Обязательные графики")
     lines.extend(f"- {figure}" for figure in reporting_config.mandatory_figures)
     return "\n".join(lines).strip() + "\n"

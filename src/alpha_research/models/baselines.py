@@ -15,13 +15,28 @@ def _weighted_mean(values: np.ndarray, weights: np.ndarray | None) -> float:
     return float((values * weights).sum() / denom) if denom else 0.0
 
 
+def _safe_rank_corr(left: pd.Series, right: pd.Series) -> float:
+    ranked = pd.concat(
+        [
+            pd.to_numeric(left, errors="coerce").rank(method="average").rename("left"),
+            pd.to_numeric(right, errors="coerce").rank(method="average").rename("right"),
+        ],
+        axis=1,
+    ).dropna()
+    if len(ranked) < 2:
+        return float("nan")
+    if ranked["left"].std(ddof=0) <= 1e-12 or ranked["right"].std(ddof=0) <= 1e-12:
+        return float("nan")
+    return float(ranked["left"].corr(ranked["right"]))
+
+
 def _rank_ic_by_date(frame: pd.DataFrame, prediction_column: str, label_column: str) -> float:
     scores: list[float] = []
     for _, group in frame.groupby("date", sort=False):
         subset = group[[prediction_column, label_column]].dropna()
         if len(subset) < 2:
             continue
-        corr = subset[prediction_column].rank(method="average").corr(subset[label_column].rank(method="average"))
+        corr = _safe_rank_corr(subset[prediction_column], subset[label_column])
         if pd.notna(corr):
             scores.append(float(corr))
     return float(np.mean(scores)) if scores else float("nan")

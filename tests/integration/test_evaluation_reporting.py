@@ -72,22 +72,22 @@ def test_final_report_generator_includes_all_mandatory_sections() -> None:
         include_sections=["executive_summary", "backtest_results", "capacity_analysis", "regime_analysis", "decay_analysis", "limitations", "next_steps"],
         mandatory_figures=["ic_over_time", "equity_curve_net", "capacity_curve"],
     )
-    report = render_final_report(reporting_config, project_name="Alpha Platform", section_payloads={"backtest_results": "Backtest body."})
-    assert "## Executive Summary" in report
-    assert "## Backtest Results" in report
-    assert "## Capacity Analysis" in report
-    assert "## Regime Analysis" in report
-    assert "## Decay Analysis" in report
-    assert "## Limitations" in report
-    assert "## Next Steps" in report
+    report = render_final_report(reporting_config, project_name="Alpha Platform", section_payloads={"backtest_results": "Тело бэктеста."})
+    assert "## Итог по запуску" in report
+    assert "## Результаты бэктеста" in report
+    assert "## Анализ capacity" in report
+    assert "## Анализ по режимам" in report
+    assert "## Анализ затухания сигнала" in report
+    assert "## Ограничения" in report
+    assert "## Что делать дальше" in report
 
 
 def test_executive_summary_template_contains_limitations_and_next_steps() -> None:
     summary = render_executive_summary(
         project_name="Alpha Platform",
-        headline="Research stack summary.",
-        limitations=["Capacity layer still synthetic."],
-        next_steps=["Implement richer robustness report."],
+        headline="Короткий итог по исследовательскому стеку.",
+        limitations=["Capacity layer пока синтетический."],
+        next_steps=["Добавить более плотный robustness report."],
     )
-    assert "Limitations" in summary
-    assert "Next Steps" in summary
+    assert "Ограничения" in summary
+    assert "Что делать дальше" in summary

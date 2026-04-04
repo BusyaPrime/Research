@@ -36,9 +36,10 @@ def prepare_portfolio_inputs(
     universe["date"] = pd.to_datetime(universe["date"], errors="coerce").dt.normalize()
     universe = universe.loc[universe["date"] == decision_date].copy()
 
-    features = feature_panel.copy()
+    feature_columns = ["date", "security_id", "sector", "beta_estimate", "adv20", "liquidity_bucket"]
+    features = feature_panel.loc[:, [column for column in feature_columns if column in feature_panel.columns]].copy()
     features["date"] = pd.to_datetime(features["date"], errors="coerce").dt.normalize()
-    features = features.loc[features["date"] == decision_date, ["date", "security_id", "sector", "beta_estimate", "adv20", "liquidity_bucket"]].copy()
+    features = features.loc[features["date"] == decision_date].copy()
     features = features.rename(columns={"adv20": "adv20_usd_t"})
 
     merged = preds.merge(universe, on=["date", "security_id"], how="left", suffixes=("", "__universe"))

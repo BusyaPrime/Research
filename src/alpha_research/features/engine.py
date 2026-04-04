@@ -44,6 +44,23 @@ def _rolling_std(values: pd.Series, window: int) -> pd.Series:
     return values.rolling(window=window, min_periods=window).std(ddof=0)
 
 
+def _group_transform_series(
+    frame: pd.DataFrame,
+    group_keys: str | list[str],
+    builder,
+    *,
+    dtype: str = "float64",
+) -> pd.Series:
+    output = pd.Series(np.nan, index=frame.index, dtype=dtype)
+    for _, group in frame.groupby(group_keys, dropna=False, sort=False):
+        result = builder(group.copy())
+        if not isinstance(result, pd.Series):
+            result = pd.Series(result, index=group.index)
+        result = result.reindex(group.index)
+        output.loc[group.index] = result.to_numpy()
+    return output
+
+
 def _percentile_rank(values: pd.Series) -> pd.Series:
     if len(values.dropna()) == 0:
         return pd.Series(np.nan, index=values.index)
@@ -69,6 +86,22 @@ def _rolling_beta(stock_returns: pd.Series, benchmark_returns: pd.Series, window
     covariance = mean_cross - mean_stock * mean_bench
     variance = mean_bench_sq - mean_bench.pow(2)
     return covariance / variance.where(variance.abs() > 1e-12)
+
+
+def _cross_section_rank(frame: pd.DataFrame, value_column: str) -> pd.Series:
+    return _group_transform_series(
+        frame,
+        "date",
+        lambda group: _percentile_rank_with_mask(group[value_column], group["is_in_universe"]),
+    )
+
+
+def _cross_section_rank_by_sector(frame: pd.DataFrame, value_column: str) -> pd.Series:
+    return _group_transform_series(
+        frame,
+        ["date", "sector"],
+        lambda group: _percentile_rank_with_mask(group[value_column], group["is_in_universe"]),
+    )
 
 
 def _join_fundamental_inputs(panel: pd.DataFrame, silver_fundamentals: pd.DataFrame) -> pd.DataFrame:
@@ -171,43 +204,65 @@ def build_feature_panel(
     panel["ex_sector_5"] = panel["ret_5"] - panel.groupby(["date", "sector"], dropna=False)["ret_5"].transform("median")
     panel["ex_sector_21"] = panel["ret_21"] - panel.groupby(["date", "sector"], dropna=False)["ret_21"].transform("median")
     panel["ex_sector_63"] = panel["ret_63"] - panel.groupby(["date", "sector"], dropna=False)["ret_63"].transform("median")
-    panel["beta_estimate"] = grouped.apply(lambda frame: _rolling_beta(frame["ret_1"], frame["bench_ret_1"])).reset_index(level=0, drop=True)
+    panel["beta_estimate"] = _group_transform_series(
+        panel,
+        "security_id",
+        lambda group: _rolling_beta(group["ret_1"], group["bench_ret_1"]),
+    )
 
     log_returns = np.log(panel["close"] / close.shift(1))
     for window in (5, 10, 21, 63):
-        panel[f"vol_{window}"] = grouped.apply(lambda frame: np.log(frame["close"] / frame["close"].shift(1)).rolling(window=window, min_periods=window).std(ddof=0)).reset_index(level=0, drop=True)
+        panel[f"vol_{window}"] = _group_transform_series(
+            panel,
+            "security_id",
+            lambda group, w=window: np.log(group["close"] / group["close"].shift(1)).rolling(window=w, min_periods=w).std(ddof=0),
+        )
     for window in (21, 63):
-        panel[f"down_vol_{window}"] = grouped.apply(
-            lambda frame: np.log(frame["close"] / frame["close"].shift(1)).clip(upper=0).rolling(window=window, min_periods=window).std(ddof=0)
-        ).reset_index(level=0, drop=True)
-        panel[f"up_vol_{window}"] = grouped.apply(
-            lambda frame: np.log(frame["close"] / frame["close"].shift(1)).clip(lower=0).rolling(window=window, min_periods=window).std(ddof=0)
-        ).reset_index(level=0, drop=True)
+        panel[f"down_vol_{window}"] = _group_transform_series(
+            panel,
+            "security_id",
+            lambda group, w=window: np.log(group["close"] / group["close"].shift(1)).clip(upper=0).rolling(window=w, min_periods=w).std(ddof=0),
+        )
+        panel[f"up_vol_{window}"] = _group_transform_series(
+            panel,
+            "security_id",
+            lambda group, w=window: np.log(group["close"] / group["close"].shift(1)).clip(lower=0).rolling(window=w, min_periods=w).std(ddof=0),
+        )
 
-    panel["hl_range_21"] = grouped.apply(lambda frame: ((frame["high"] - frame["low"]) / frame["close"]).rolling(21, min_periods=21).mean()).reset_index(level=0, drop=True)
-    panel["parkinson_21"] = grouped.apply(
-        lambda frame: np.sqrt(((np.log(frame["high"] / frame["low"]) ** 2).rolling(21, min_periods=21).sum()) / (4 * 21 * np.log(2)))
-    ).reset_index(level=0, drop=True)
-    panel["gk_21"] = grouped.apply(
-        lambda frame: np.sqrt(
+    panel["hl_range_21"] = _group_transform_series(
+        panel,
+        "security_id",
+        lambda group: ((group["high"] - group["low"]) / group["close"]).rolling(21, min_periods=21).mean(),
+    )
+    panel["parkinson_21"] = _group_transform_series(
+        panel,
+        "security_id",
+        lambda group: np.sqrt(((np.log(group["high"] / group["low"]) ** 2).rolling(21, min_periods=21).sum()) / (4 * 21 * np.log(2))),
+    )
+    panel["gk_21"] = _group_transform_series(
+        panel,
+        "security_id",
+        lambda group: np.sqrt(
             (
                 (
-                    0.5 * (np.log(frame["high"] / frame["low"]) ** 2)
-                    - (2 * np.log(2) - 1) * (np.log(frame["close"] / frame["open"]) ** 2)
+                    0.5 * (np.log(group["high"] / group["low"]) ** 2)
+                    - (2 * np.log(2) - 1) * (np.log(group["close"] / group["open"]) ** 2)
                 ).rolling(21, min_periods=21).sum()
             ) / 21
-        )
-    ).reset_index(level=0, drop=True)
-    panel["atr_14"] = grouped.apply(
-        lambda frame: pd.concat(
+        ),
+    )
+    panel["atr_14"] = _group_transform_series(
+        panel,
+        "security_id",
+        lambda group: pd.concat(
             [
-                frame["high"] - frame["low"],
-                (frame["high"] - frame["close"].shift(1)).abs(),
-                (frame["low"] - frame["close"].shift(1)).abs(),
+                group["high"] - group["low"],
+                (group["high"] - group["close"].shift(1)).abs(),
+                (group["low"] - group["close"].shift(1)).abs(),
             ],
             axis=1,
         ).max(axis=1).rolling(14, min_periods=14).mean()
-    ).reset_index(level=0, drop=True)
+    )
 
     panel["log_volume_1"] = np.log1p(panel["volume"].clip(lower=0))
     panel["log_dollar_volume_1"] = np.log1p((panel["close"] * panel["volume"]).clip(lower=0))
@@ -216,7 +271,11 @@ def build_feature_panel(
     panel["volume_surprise_5"] = panel["volume"] / grouped["volume"].transform(lambda values: values.shift(1).rolling(window=5, min_periods=5).mean())
     panel["volume_surprise_20"] = panel["volume"] / grouped["volume"].transform(lambda values: values.shift(1).rolling(window=20, min_periods=20).mean())
     amihud_raw = np.where((panel["close"] * panel["volume"]) > 0, panel["ret_1"].abs() / (panel["close"] * panel["volume"]), np.nan)
-    panel["amihud_21"] = grouped.apply(lambda frame: pd.Series(amihud_raw[frame.index], index=frame.index).rolling(window=21, min_periods=21).mean()).reset_index(level=0, drop=True)
+    panel["amihud_21"] = _group_transform_series(
+        panel,
+        "security_id",
+        lambda group: pd.Series(amihud_raw[group.index], index=group.index).rolling(window=21, min_periods=21).mean(),
+    )
     panel["zero_volume_rate_21"] = grouped["volume"].transform(lambda values: (values == 0).astype(float).rolling(window=21, min_periods=21).mean())
 
     panel["market_cap"] = panel["close"] * panel["shares_outstanding"]
@@ -245,21 +304,11 @@ def build_feature_panel(
             "vol_21": "cs_rank_vol_21",
             "adv20": "cs_rank_adv20",
         }[feature]
-        panel[rank_name] = panel.groupby("date", dropna=False, group_keys=False).apply(
-            lambda frame, feature_name=feature: _percentile_rank_with_mask(frame[feature_name], frame["is_in_universe"])
-        )
-    panel["liquidity_rank_20"] = panel.groupby("date", dropna=False, group_keys=False).apply(
-        lambda frame: _percentile_rank_with_mask(frame["adv20"], frame["is_in_universe"])
-    )
-    panel["sector_rank_ret_21"] = panel.groupby(["date", "sector"], dropna=False, group_keys=False).apply(
-        lambda frame: _percentile_rank_with_mask(frame["ret_21"], frame["is_in_universe"])
-    )
-    panel["sector_rank_vol_21"] = panel.groupby(["date", "sector"], dropna=False, group_keys=False).apply(
-        lambda frame: _percentile_rank_with_mask(frame["vol_21"], frame["is_in_universe"])
-    )
-    panel["sector_rank_adv20"] = panel.groupby(["date", "sector"], dropna=False, group_keys=False).apply(
-        lambda frame: _percentile_rank_with_mask(frame["adv20"], frame["is_in_universe"])
-    )
+        panel[rank_name] = _cross_section_rank(panel, feature)
+    panel["liquidity_rank_20"] = _cross_section_rank(panel, "adv20")
+    panel["sector_rank_ret_21"] = _cross_section_rank_by_sector(panel, "ret_21")
+    panel["sector_rank_vol_21"] = _cross_section_rank_by_sector(panel, "vol_21")
+    panel["sector_rank_adv20"] = _cross_section_rank_by_sector(panel, "adv20")
 
     book_prev = grouped["book_equity"].shift(252)
     assets_prev = grouped["total_assets"].shift(252)

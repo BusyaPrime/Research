@@ -137,8 +137,8 @@ def _select_experiment(loaded: LoadedConfigBundle) -> tuple[ExperimentConfig, li
     if unsupported:
         names = ", ".join(sorted(experiment.model.name for experiment in unsupported))
         notes.append(
-            "TEMPORARY SIMPLIFICATION: unsupported configured models skipped in operational run "
-            f"until advanced ranker adapters are implemented ({names})."
+            "TEMPORARY SIMPLIFICATION: в operational run пропущены неподдерживаемые модели "
+            f"до подключения advanced ranker adapters ({names})."
         )
     if supported:
         for experiment in supported:
@@ -156,7 +156,7 @@ def _select_experiment(loaded: LoadedConfigBundle) -> tuple[ExperimentConfig, li
         portfolio={"mode": loaded.bundle.portfolio.mode},
         cost_scenario="base",
     )
-    notes.append("TEMPORARY SIMPLIFICATION: no supported experiment config found; fallback ridge baseline used.")
+    notes.append("TEMPORARY SIMPLIFICATION: не найден поддерживаемый experiment config, использован fallback ridge baseline.")
     return fallback, notes
 
 
@@ -586,16 +586,16 @@ def execute_operational_command(
     model_comparison = pd.DataFrame(model_comparison_rows)
     section_payloads = {
         "executive_summary": (
-            f"Run `{run_id}` built dataset `{experiment.dataset_version}` with {len(gold.panel):,} rows, "
-            f"{len(feature_columns)} model features, {len(splits.folds)} purged walk-forward folds, "
-            f"and OOF-only backtest for `{primary_model_name}`."
+            f"Запуск `{run_id}` собрал датасет `{experiment.dataset_version}` на {len(gold.panel):,} строк, "
+            f"с {len(feature_columns)} модельными фичами, {len(splits.folds)} purged walk-forward фолдами "
+            f"и OOF-only бэктестом для `{primary_model_name}`."
         ),
         "time_semantics": "\n".join(
             [
-                "- decision timestamp: after close_t",
+                "- decision timestamp: после close_t",
                 "- execution timestamp: open_{t+1}",
-                "- labels aligned to next-open execution semantics",
-                "- PIT fundamentals joined only on available_from <= decision timestamp",
+                "- labels выровнены относительно next-open execution semantics",
+                "- PIT fundamentals джойнятся только при available_from <= decision timestamp",
             ]
         ),
         "data_lineage": "\n".join(
@@ -639,12 +639,12 @@ def execute_operational_command(
         section_payloads=section_payloads,
         limitations=[
             *notes,
-            "Advanced tree/ranker models are not yet connected to the operational path.",
+            "Advanced tree/ranker models пока не подключены к operational path.",
         ],
         next_steps=[
-            "Replace synthetic provider stub with real vendor adapters and production secrets flow.",
-            "Promote advanced rankers into the model registry and tuning path.",
-            "Remove remaining TEMPORARY SIMPLIFICATION notes from the release bundle.",
+            "Заменить synthetic provider stub на реальные vendor adapters и нормальный secrets flow.",
+            "Подключить advanced rankers к model registry и tuning path.",
+            "Выжечь оставшиеся TEMPORARY SIMPLIFICATION из release bundle.",
         ],
     )
     report_path = report_dir / "final_report.md"
