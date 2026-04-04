@@ -46,6 +46,14 @@ python .\scripts\verify_release_bundle.py --root .
 
 Этот шаг не заменяет ручной просмотр отчета, но быстро ловит самый неприятный класс проблем: report bundle ссылается на артефакты, которых физически нет на диске.
 
+Для компактного сквозного прогона есть отдельный smoke runner:
+
+```powershell
+python .\scripts\run_release_smoke.py --root .
+```
+
+Он не заменяет полный production-size прогон, но полезен как честный operational smoke: ingest surface, report path и release verifier идут подряд без ручной склейки.
+
 ## Release gates
 
 - unit tests зеленые;

@@ -3,7 +3,7 @@ source_of_truth:
   primary: "docs/specs/MASTER_SPEC.md"
   secondary: "docs/specs/machine_spec.yaml"
 overall_status:
-  completeness_percent_estimate: 95
+  completeness_percent_estimate: 96
   release_ready: false
   end_to_end_pipeline_present: true
   oof_only_backtest_present: true
@@ -76,7 +76,7 @@ temporary_simplifications:
   - "Operational pipeline uses deterministic synthetic data until real vendor adapters are configured."
 open_gaps:
   - "Подключить real vendor adapters и operational ingest path без synthetic bundle."
-  - "Дожать clean-room release-hardening до полностью чистого reproducible bundle на чистом окружении."
+  - "Дожать clean-room release-hardening до полностью чистого reproducible bundle на живом external data path."
 risk_level:
   time_semantics: low
   point_in_time_correctness: low

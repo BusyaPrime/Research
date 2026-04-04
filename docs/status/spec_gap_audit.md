@@ -89,6 +89,6 @@ Baseline, linear path и boosting-модели уже едут в operational ru
 
 ## Вывод
 
-По текущей оценке проект находится примерно в зоне `95%` от полного целевого состояния по `MASTER_SPEC.md`.
+По текущей оценке проект находится примерно в зоне `96%` от полного целевого состояния по `MASTER_SPEC.md`.
 
-Это уже рабочая исследовательская платформа с честным сквозным контуром, operational ingest surface, release verifier и нормальным report/review bundle, но еще не тот момент, когда можно без оговорок сказать “все требования spec добиты до конца”. До полного закрытия ТЗ осталось меньше, чем уже сделано, но оставшийся кусок по-прежнему сидит в самых капризных слоях: real vendor adapters, secrets/runtime operations и final clean-room hardening.
+Это уже рабочая исследовательская платформа с честным сквозным контуром, operational ingest surface, release verifier, config-driven release smoke profile и нормальным report/review bundle, но еще не тот момент, когда можно без оговорок сказать “все требования spec добиты до конца”. До полного закрытия ТЗ осталось меньше, чем уже сделано, но оставшийся кусок по-прежнему сидит в самых капризных слоях: real vendor adapters, secrets/runtime operations и final clean-room hardening на живом внешнем path.

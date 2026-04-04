@@ -19,6 +19,14 @@
 
 ## Минимальный локальный прогон
 
+### Быстрый путь для smoke-проверки
+
+```powershell
+python .\scripts\run_release_smoke.py --root .
+```
+
+Этот путь использует отдельный config-driven smoke profile из `configs/runtime.yaml`. Он специально компактнее полного research-прогона, чтобы быстро проверить operational stitching: ingest, report bundle, figures, review bundle и verifier.
+
 ### 1. Поднять окружение
 
 ```powershell
