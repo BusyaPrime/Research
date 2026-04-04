@@ -30,7 +30,7 @@
 - labels/features/gold: label engine, registry-driven features, fold-safe preprocessing, gold panel assembly;
 - research loop: purged walk-forward splits, baseline models, tuning для линейных моделей, OOF predictions;
 - portfolio/backtest: target weights, turnover, execution simulation, costs, holdings state, gross/net accounting;
-- robustness/evaluation: capacity ladder, predictive metrics, regime breakdown, decay, markdown report generation;
+- robustness/evaluation: capacity ladder, predictive metrics, regime breakdown, decay, markdown/html report generation, persisted section bundle и review bundle;
 - hardening: leakage guards, operational stage wiring, CI smoke-проверки, release checklist.
 
 ## Как устроен проект
@@ -88,7 +88,7 @@ python -m pytest
 
 ## Что еще не доведено до релизного блеска
 
-- Часть CLI-стадий уже заведена в operational path, но вокруг них еще есть слой доводки по артефактам и финальной упаковке отчетов.
+- Часть CLI-стадий уже заведена в operational path, а report bundle теперь сохраняется с секциями, HTML-версией и индексом артефактов. Но финальная упаковка figures и часть release-hardening еще не дожаты до конца.
 - В пайплайне остается несколько честно помеченных временных упрощений, например упрощенная beta-neutralization в портфельном слое.
 - Полный release-hardening еще допиливается: тут уже не про идею, а про то, чтобы все воспроизводилось без сюрпризов на чистом окружении.
 

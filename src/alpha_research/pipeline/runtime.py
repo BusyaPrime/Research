@@ -9,7 +9,15 @@ import pandas as pd
 from alpha_research.backtest.engine import run_backtest
 from alpha_research.capacity.engine import run_capacity_analysis
 from alpha_research.common.io import write_json, write_parquet
-from alpha_research.common.manifests import PipelineRunManifest, ReviewBundle, StageArtifact, write_model_document
+from alpha_research.common.manifests import (
+    PipelineRunManifest,
+    ReportBundle,
+    ReportFigureArtifact,
+    ReportSectionArtifact,
+    ReviewBundle,
+    StageArtifact,
+    write_model_document,
+)
 from alpha_research.common.paths import RepositoryPaths
 from alpha_research.config.loader import LoadedConfigBundle
 from alpha_research.config.models import CapacityConfig, ExperimentConfig, SplitsConfig, UniverseConfig
@@ -20,7 +28,7 @@ from alpha_research.evaluation.metrics import (
     compute_predictive_metrics,
     compute_regime_breakdown,
 )
-from alpha_research.evaluation.reporting import render_final_report
+from alpha_research.evaluation.reporting import render_final_report, render_final_report_html, render_report_sections
 from alpha_research.features.engine import FeatureBuildResult, build_feature_panel
 from alpha_research.features.registry import feature_names_by_family, load_feature_registry
 from alpha_research.labels.engine import build_label_panel
@@ -262,8 +270,10 @@ def execute_operational_command(
     diagnostics_dir = run_dir / "diagnostics"
     manifests_dir = run_dir / "manifests"
     report_dir = paths.reports_dir / run_id
+    report_sections_dir = report_dir / "sections"
     for directory in (dataset_dir, diagnostics_dir, manifests_dir, report_dir):
         directory.mkdir(parents=True, exist_ok=True)
+    report_sections_dir.mkdir(parents=True, exist_ok=True)
 
     bundle = synthetic_bundle or build_synthetic_research_bundle(seed=loaded.bundle.project.default_random_seed)
     experiment, experiment_notes = _select_experiment(loaded)
@@ -584,6 +594,7 @@ def execute_operational_command(
             }
         )
     model_comparison = pd.DataFrame(model_comparison_rows)
+    notes.append("TEMPORARY SIMPLIFICATION: обязательные figures пока индексируются в report bundle, но не рендерятся как отдельные визуальные артефакты.")
     section_payloads = {
         "executive_summary": (
             f"Запуск `{run_id}` собрал датасет `{experiment.dataset_version}` на {len(gold.panel):,} строк, "
@@ -647,10 +658,101 @@ def execute_operational_command(
             "Выжечь оставшиеся TEMPORARY SIMPLIFICATION из release bundle.",
         ],
     )
+    rendered_sections = render_report_sections(
+        loaded.bundle.reporting,
+        section_payloads=section_payloads,
+        limitations=[
+            *notes,
+            "Advanced tree/ranker models пока не подключены к operational path.",
+        ],
+        next_steps=[
+            "Заменить synthetic provider stub на реальные vendor adapters и нормальный secrets flow.",
+            "Подключить advanced rankers к model registry и tuning path.",
+            "Выжечь оставшиеся TEMPORARY SIMPLIFICATION из release bundle.",
+        ],
+    )
     report_path = report_dir / "final_report.md"
     report_path.write_text(report_text, encoding="utf-8")
     artifacts.append(
         StageArtifact(name="final_report", path=str(report_path.relative_to(paths.root)), format="markdown")
+    )
+    section_artifacts: list[ReportSectionArtifact] = []
+    section_index_payload: dict[str, dict[str, str | int]] = {}
+    for index, section in enumerate(rendered_sections, start=1):
+        section_path = report_sections_dir / f"{index:02d}_{section.key}.md"
+        section_body = f"## {section.title}\n\n{section.body}\n"
+        section_path.write_text(section_body, encoding="utf-8")
+        relative_path = str(section_path.relative_to(paths.root))
+        section_artifacts.append(
+            ReportSectionArtifact(
+                section_key=section.key,
+                title=section.title,
+                path=relative_path,
+                line_count=len(section_body.splitlines()),
+            )
+        )
+        section_index_payload[section.key] = {"title": section.title, "path": relative_path, "line_count": len(section_body.splitlines())}
+
+    section_index_path = write_json(section_index_payload, manifests_dir / "report_sections.json")
+    artifacts.append(
+        StageArtifact(
+            name="report_sections_index",
+            path=str(section_index_path.relative_to(paths.root)),
+            row_count=len(section_artifacts),
+            format="json",
+        )
+    )
+
+    generated_formats = ["markdown"]
+    pending_formats: list[str] = []
+    report_html_path: Path | None = None
+    if "html" in loaded.bundle.reporting.formats:
+        report_html = render_final_report_html(
+            loaded.bundle.reporting,
+            project_name=loaded.bundle.project.project_name,
+            section_payloads=section_payloads,
+            limitations=[
+                *notes,
+                "Advanced tree/ranker models пока не подключены к operational path.",
+            ],
+            next_steps=[
+                "Заменить synthetic provider stub на реальные vendor adapters и нормальный secrets flow.",
+                "Подключить advanced rankers к model registry и tuning path.",
+                "Выжечь оставшиеся TEMPORARY SIMPLIFICATION из release bundle.",
+            ],
+        )
+        report_html_path = report_dir / "final_report.html"
+        report_html_path.write_text(report_html, encoding="utf-8")
+        generated_formats.append("html")
+        artifacts.append(
+            StageArtifact(name="final_report_html", path=str(report_html_path.relative_to(paths.root)), format="html")
+        )
+    for fmt in loaded.bundle.reporting.formats:
+        if fmt not in generated_formats:
+            pending_formats.append(fmt)
+
+    figure_artifacts = [
+        ReportFigureArtifact(
+            figure_name=figure_name,
+            status="stub_not_generated",
+            notes=["Figure rendering is not yet wired to the operational runtime path."],
+        )
+        for figure_name in loaded.bundle.reporting.mandatory_figures
+    ]
+    report_bundle = ReportBundle(
+        project_name=loaded.bundle.project.project_name,
+        report_path=str(report_path.relative_to(paths.root)),
+        report_html_path=None if report_html_path is None else str(report_html_path.relative_to(paths.root)),
+        section_index_path=str(section_index_path.relative_to(paths.root)),
+        section_artifacts=section_artifacts,
+        figure_artifacts=figure_artifacts,
+        requested_formats=list(loaded.bundle.reporting.formats),
+        generated_formats=generated_formats,
+        pending_formats=pending_formats,
+    )
+    report_bundle_path = write_model_document(report_bundle, manifests_dir / "report_bundle.json")
+    artifacts.append(
+        StageArtifact(name="report_bundle", path=str(report_bundle_path.relative_to(paths.root)), format="json")
     )
 
     completed_at = _now_utc()
@@ -672,6 +774,8 @@ def execute_operational_command(
         run_id=run_id,
         manifest_path=str(manifest_path.relative_to(paths.root)),
         report_path=str(report_path.relative_to(paths.root)),
+        report_html_path=None if report_html_path is None else str(report_html_path.relative_to(paths.root)),
+        report_bundle_path=str(report_bundle_path.relative_to(paths.root)),
         release_checklist_path="docs/release_checklist.md",
         required_manifests={
             "dataset_manifest": str((manifests_dir / "dataset_manifest.json").relative_to(paths.root)),
@@ -682,8 +786,12 @@ def execute_operational_command(
         },
         required_reports={
             "final_report": str(report_path.relative_to(paths.root)),
+            "final_report_html": None if report_html_path is None else str(report_html_path.relative_to(paths.root)),
             "fold_metadata": str(fold_metadata_path.relative_to(paths.root)),
+            "report_bundle": str(report_bundle_path.relative_to(paths.root)),
+            "report_sections_index": str(section_index_path.relative_to(paths.root)),
         },
+        report_section_paths={artifact.section_key: artifact.path for artifact in section_artifacts},
         key_metrics={
             "dataset_row_count": int(len(gold.panel)),
             "feature_count": int(len(feature_columns)),
@@ -692,6 +800,7 @@ def execute_operational_command(
             "net_sharpe": portfolio_metrics.set_index("metric")["value"].to_dict().get("net_sharpe"),
             "max_drawdown": portfolio_metrics.set_index("metric")["value"].to_dict().get("max_drawdown"),
         },
+        pending_outputs=pending_formats,
         temporary_simplifications=notes,
     )
     review_bundle_path = write_model_document(review_bundle, manifests_dir / "review_bundle.json")

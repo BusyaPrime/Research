@@ -53,12 +53,15 @@ def test_run_report_builds_release_bundle_and_stable_regression_fixture(workspac
     review_bundle_path = run_root / "manifests" / "review_bundle.json"
     manifest_path = run_root / "manifests" / "pipeline_run_manifest.json"
     report_path = workspace_repo_copy / json.loads(review_bundle_path.read_text(encoding="utf-8"))["report_path"]
+    report_bundle_path = workspace_repo_copy / json.loads(review_bundle_path.read_text(encoding="utf-8"))["report_bundle_path"]
     review_bundle = json.loads(review_bundle_path.read_text(encoding="utf-8"))
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    report_bundle = json.loads(report_bundle_path.read_text(encoding="utf-8"))
 
     assert review_bundle_path.exists()
     assert manifest_path.exists()
     assert report_path.exists()
+    assert report_bundle_path.exists()
     assert (workspace_repo_copy / "docs" / "release_checklist.md").exists()
     assert review_bundle["required_manifests"]
     assert review_bundle["required_reports"]
@@ -67,13 +70,21 @@ def test_run_report_builds_release_bundle_and_stable_regression_fixture(workspac
     for relative_path in review_bundle["required_manifests"].values():
         assert (workspace_repo_copy / relative_path).exists()
     for relative_path in review_bundle["required_reports"].values():
+        if relative_path is not None:
+            assert (workspace_repo_copy / relative_path).exists()
+    for relative_path in review_bundle["report_section_paths"].values():
         assert (workspace_repo_copy / relative_path).exists()
 
     assert manifest["dataset_version"] == "gold_latest"
+    assert review_bundle["report_html_path"]
+    assert review_bundle["report_bundle_path"]
     assert review_bundle["key_metrics"]["feature_count"] == 87
     assert review_bundle["key_metrics"]["fold_count"] == 4
     assert review_bundle["key_metrics"]["dataset_row_count"] == 3012
     assert round(float(review_bundle["key_metrics"]["net_sharpe"]), 6) == -16.073303
+    assert sorted(report_bundle["generated_formats"]) == ["html", "markdown"]
+    assert report_bundle["section_artifacts"]
+    assert report_bundle["figure_artifacts"]
 
 
 def test_ci_workflow_runs_unit_integration_and_leakage_suites(repo_root) -> None:

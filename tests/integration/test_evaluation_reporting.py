@@ -9,7 +9,12 @@ from alpha_research.evaluation.metrics import (
     compute_predictive_metrics,
     compute_regime_breakdown,
 )
-from alpha_research.evaluation.reporting import render_executive_summary, render_final_report
+from alpha_research.evaluation.reporting import (
+    render_executive_summary,
+    render_final_report,
+    render_final_report_html,
+    render_report_sections,
+)
 from tests.helpers.model_data import build_model_research_bundle
 
 
@@ -80,6 +85,32 @@ def test_final_report_generator_includes_all_mandatory_sections() -> None:
     assert "## Анализ затухания сигнала" in report
     assert "## Ограничения" in report
     assert "## Что делать дальше" in report
+
+
+def test_report_sections_and_html_renderer_preserve_requested_structure() -> None:
+    reporting_config = ReportingConfig(
+        formats=["markdown", "html"],
+        include_sections=["executive_summary", "backtest_results", "limitations", "next_steps"],
+        mandatory_figures=["ic_over_time", "equity_curve_net"],
+    )
+    sections = render_report_sections(
+        reporting_config,
+        section_payloads={"backtest_results": "Тело бэктеста."},
+        limitations=["Есть временные упрощения."],
+        next_steps=["Дорендерить figure-артефакты."],
+    )
+    html_report = render_final_report_html(
+        reporting_config,
+        project_name="Alpha Platform",
+        section_payloads={"backtest_results": "Тело бэктеста."},
+        limitations=["Есть временные упрощения."],
+        next_steps=["Дорендерить figure-артефакты."],
+    )
+
+    assert [section.key for section in sections] == ["executive_summary", "backtest_results", "limitations", "next_steps"]
+    assert "<html lang=\"ru\">" in html_report
+    assert "<h2>Результаты бэктеста</h2>" in html_report
+    assert "Дорендерить figure-артефакты." in html_report
 
 
 def test_executive_summary_template_contains_limitations_and_next_steps() -> None:
