@@ -29,6 +29,7 @@
 - PIT и universe: intervalized fundamentals, as-of join, future-data guards, point-in-time snapshots universe;
 - labels/features/gold: label engine, registry-driven features, fold-safe preprocessing, gold panel assembly;
 - research loop: purged walk-forward splits, baseline models, tuning для линейных моделей, OOF predictions;
+- research governance: strict runtime policy, явный split protocol, evaluation manifest и data-usage trace по fold/model;
 - portfolio/backtest: target weights, turnover, execution simulation, costs, holdings state, gross/net accounting;
 - robustness/evaluation: capacity ladder, predictive metrics, regime breakdown, decay, ablation-матрицы, markdown/html report generation, persisted section bundle, figure artifacts и review bundle;
 - hardening: leakage guards, operational stage wiring, CI smoke-проверки, release checklist.
@@ -62,6 +63,7 @@
 - Backtest строится только на OOF predictions.
 - Gross и net результаты считаются отдельно.
 - Каждый run должен быть привязан к `dataset version`, `config hash`, `git commit`, `run id`, `timestamp`.
+- Unsupported experiment, missing requested report format и release-grade run с временными упрощениями не маскируются под `completed`.
 
 Если что-то из этого сломано, результат красивый, но исследовательски недействительный.
 
@@ -95,13 +97,12 @@ python .\scripts\run_release_smoke.py --root . --mode live-public
 ## Что важно понимать про режимы запуска
 
 - `synthetic_vendor_stub` остается как детерминированный offline/fallback path для быстрых локальных и регрессионных прогонов;
+- `synthetic_vendor_stub` теперь живет строго как `fixture_only` режим: он детерминированный, полезный для regression/clean-room сценариев, но не считается release-grade результатом;
 - `configured_adapters` — основной operational режим с публичными и локальными адаптерами;
 - `configured-local` smoke нужен для clean-room воспроизводимости без сети;
 - `live-public` smoke нужен для проверки real external path на публичных источниках.
 
-Это не набор взаимозаменяемых костылей. Это разные режимы одной и той же платформы: offline, clean-room и live-public verification.
-
-Это не ломает архитектуру, но и делать вид, что работа полностью закончена, было бы странно.
+Это не набор взаимозаменяемых костылей. У каждого режима свой capability contract: можно ли строить release bundle, требуется ли external proof и допустим ли synthetic ingest.
 
 Для локального воспроизводимого прогона есть отдельный runbook: [reproducible_local_runbook.md](/E:/projecttype/docs/runbooks/reproducible_local_runbook.md).
 Для отдельного тяжелого smoke-прогона есть workflow [release_smoke.yml](/E:/projecttype/.github/workflows/release_smoke.yml).

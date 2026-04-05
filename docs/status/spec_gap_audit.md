@@ -21,7 +21,9 @@
 - features строятся registry-driven способом;
 - preprocessing fold-safe;
 - splits purged/embargoed;
+- split protocol сохраняется отдельным артефактом и проверяет overlap/purge/embargo инварианты;
 - backtest идет только на OOF predictions;
+- evaluation protocol и data-usage trace сохраняются отдельным manifest-слоем;
 - есть gross/net/cost/capacity/regime/decay артефакты.
 
 ### Reproducibility
@@ -41,6 +43,18 @@
 - configured adapters path для reference, ingest и downstream runtime.
 
 То есть `run-report` и `run-full-pipeline` теперь умеют собирать research bundle не только из синтетики, но и через configured adapters с реальными внешними вызовами и локальными источниками. Плюс появился clean-room smoke path на local-file adapters без monkeypatch'ей и без сети, а live-public smoke отдельно прошел на реальных публичных источниках.
+
+### Strict runtime policy
+
+Этот слой тоже закрыт. Runtime больше не занимается “умной деградацией”, которая выглядит прилично в логах и плохо пахнет на ревью.
+
+Что теперь зафиксировано конструктивно:
+
+- operational experiment выбирается явно через `runtime.operational_experiment_key`;
+- неподдерживаемая модель в operational path приводит к hard failure, а не к fallback на baseline;
+- requested report formats обязаны реально существовать, иначе release-capable run не считается завершенным;
+- synthetic path маркируется как `fixture_only` и не проходит release verifier;
+- review bundle с `pending_outputs`, `temporary_simplifications` или `release_eligible = false` verifier отклоняет.
 
 ### Model zoo
 

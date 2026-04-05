@@ -9,6 +9,10 @@ overall_status:
   oof_only_backtest_present: true
   point_in_time_core_present: true
   acceptance_test_suite_present: true
+  strict_operational_policy: true
+  runtime_capabilities_enforced: true
+  evaluation_manifest_present: true
+  split_protocol_artifacts_present: true
 phase_status:
   analyze_and_map: completed
   foundation: completed
