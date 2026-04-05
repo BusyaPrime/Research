@@ -5,15 +5,15 @@ from functools import lru_cache
 import numpy as np
 import pandas as pd
 
+from alpha_research.config.models import SplitsConfig
 from alpha_research.models.advanced_linear import ElasticNetRegressionModel, RankRidgeRegressionModel
 from alpha_research.models.baselines import (
     LassoRegressionModel,
     RidgeRegressionModel,
     deserialize_model,
 )
-from alpha_research.training.oof import ModelRunSpec, generate_oof_predictions
 from alpha_research.splits.engine import generate_walk_forward_splits
-from alpha_research.config.models import SplitsConfig
+from alpha_research.training.oof import ModelRunSpec, generate_oof_predictions
 from tests.helpers.model_data import build_model_research_bundle
 
 

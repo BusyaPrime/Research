@@ -1,11 +1,10 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from html import escape
-from collections.abc import Mapping
 
 from alpha_research.config.models import ReportingConfig
-
 
 SECTION_TITLES = {
     "executive_summary": "Итог по запуску",

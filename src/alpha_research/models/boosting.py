@@ -126,7 +126,7 @@ class _GradientBoostingBase:
                     )
         return best_stump, baseline_loss - best_loss
 
-    def fit(self, frame: pd.DataFrame, feature_columns: list[str], label_column: str) -> "_GradientBoostingBase":
+    def fit(self, frame: pd.DataFrame, feature_columns: list[str], label_column: str) -> _GradientBoostingBase:
         clean = frame[feature_columns + [label_column]].copy()
         if "date" in frame.columns:
             clean["date"] = pd.to_datetime(frame["date"], errors="coerce").dt.normalize()

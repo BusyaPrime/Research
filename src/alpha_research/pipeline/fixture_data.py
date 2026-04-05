@@ -9,7 +9,6 @@ from alpha_research.pit.builders import build_silver_fundamentals_pit, build_sil
 from alpha_research.reference.security_master import build_security_master
 from alpha_research.time.calendar import ExchangeCalendarAdapter
 
-
 METRIC_NAMES = [
     "book_equity",
     "net_income_ttm",

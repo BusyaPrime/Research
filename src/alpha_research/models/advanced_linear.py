@@ -53,7 +53,7 @@ class ElasticNetRegressionModel:
         self.coefficients_: np.ndarray | None = None
         self.intercept_: float = 0.0
 
-    def fit(self, frame: pd.DataFrame, feature_columns: list[str], label_column: str) -> "ElasticNetRegressionModel":
+    def fit(self, frame: pd.DataFrame, feature_columns: list[str], label_column: str) -> ElasticNetRegressionModel:
         clean = frame[feature_columns + [label_column]].dropna().copy()
         self.feature_columns_ = list(feature_columns)
         if clean.empty:
@@ -117,7 +117,7 @@ class RankRidgeRegressionModel:
         self.alpha = float(alpha)
         self.model_ = RidgeRegressionModel(alpha=alpha)
 
-    def fit(self, frame: pd.DataFrame, feature_columns: list[str], label_column: str) -> "RankRidgeRegressionModel":
+    def fit(self, frame: pd.DataFrame, feature_columns: list[str], label_column: str) -> RankRidgeRegressionModel:
         clean = frame.copy()
         clean["date"] = pd.to_datetime(clean["date"], errors="coerce").dt.normalize()
         clean["_rank_target"] = _rank_target(clean[label_column], clean["date"])

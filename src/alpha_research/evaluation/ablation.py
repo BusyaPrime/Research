@@ -9,9 +9,9 @@ from alpha_research.config.models import CostsConfig, PortfolioConfig
 from alpha_research.evaluation.metrics import compute_portfolio_metrics, compute_predictive_metrics
 from alpha_research.features.registry import load_feature_registry
 from alpha_research.preprocessing.transforms import PreprocessingSpec
+from alpha_research.splits.engine import FoldDefinition
 from alpha_research.time.calendar import ExchangeCalendarAdapter
 from alpha_research.training.oof import ModelRunSpec, generate_oof_predictions
-from alpha_research.splits.engine import FoldDefinition
 
 
 @dataclass(frozen=True)

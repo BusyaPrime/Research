@@ -4,7 +4,7 @@ import importlib.metadata
 import platform
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from pydantic import BaseModel
@@ -51,7 +51,7 @@ def build_environment_fingerprint() -> str:
 
 def capture_runtime_metadata(root: Path) -> RuntimeMetadata:
     return RuntimeMetadata(
-        captured_at_utc=datetime.now(timezone.utc).isoformat(),
+        captured_at_utc=datetime.now(UTC).isoformat(),
         git_commit_hash=_run_git(root, "rev-parse", "HEAD"),
         git_branch=_run_git(root, "rev-parse", "--abbrev-ref", "HEAD"),
         python_version=platform.python_version(),

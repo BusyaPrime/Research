@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from alpha_research.common.hashing import hash_file
@@ -71,7 +71,7 @@ def _print(payload: object) -> None:
 def _run_bootstrap(args: argparse.Namespace) -> int:
     paths = _resolve_root(args.root)
     loaded = load_resolved_config_bundle(paths.root, extra_policy=args.extra_policy)
-    run_id = f"bootstrap-{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}"
+    run_id = f"bootstrap-{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}"
     run_dir = paths.artifacts_dir / "bootstrap" / run_id
     logger = configure_logging(paths.logs_dir, run_id)
 

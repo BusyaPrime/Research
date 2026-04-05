@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
-from datetime import datetime, timezone
-from pathlib import Path
 import warnings
+from dataclasses import dataclass, replace
+from datetime import UTC, datetime
+from pathlib import Path
 
+from alpha_research.common.hashing import hash_mapping
 from alpha_research.common.manifests import write_json_document
 from alpha_research.common.paths import RepositoryPaths
 from alpha_research.config.loader import LoadedConfigBundle, load_resolved_config_bundle
-from alpha_research.common.hashing import hash_mapping
 from alpha_research.pipeline.runtime import execute_operational_command
 from alpha_research.pipeline.stages import run_stage_command
 from alpha_research.release.local_fixtures import prepare_local_configured_smoke_bundle
@@ -25,7 +25,7 @@ class ReleaseSmokeResult:
 
 
 def _now_utc() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _build_smoke_loaded(loaded: LoadedConfigBundle) -> LoadedConfigBundle:

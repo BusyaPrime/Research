@@ -43,7 +43,7 @@ class SplitArtifacts:
     folds: list[FoldDefinition]
     metadata: pd.DataFrame
     timeline_plot: str
-    protocol: "ValidationProtocol"
+    protocol: ValidationProtocol
     role_matrix: pd.DataFrame
 
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -28,6 +29,16 @@ from alpha_research.models.boosting import (
 )
 from alpha_research.preprocessing.transforms import FoldSafePreprocessor, PreprocessingSpec
 from alpha_research.splits.engine import FoldDefinition
+
+
+def _param_as_float(params: dict[str, object], key: str, default: float) -> float:
+    value = params.get(key, default)
+    return float(value) if value is not None else float(default)
+
+
+def _param_as_int(params: dict[str, object], key: str, default: int) -> int:
+    value = cast(int | float | str | None, params.get(key, default))
+    return int(value) if value is not None else int(default)
 
 
 @dataclass(frozen=True)
@@ -63,25 +74,25 @@ def _instantiate_model(spec: ModelRunSpec):
         return LassoRegressionModel(alpha=float(spec.alpha_grid[0] if spec.alpha_grid else 1.0))
     if spec.name == "elastic_net_regression":
         return ElasticNetRegressionModel(
-            alpha=float(spec.params.get("alpha", spec.alpha_grid[0] if spec.alpha_grid else 1.0)),
-            l1_ratio=float(spec.params.get("l1_ratio", 0.5)),
+            alpha=_param_as_float(spec.params, "alpha", spec.alpha_grid[0] if spec.alpha_grid else 1.0),
+            l1_ratio=_param_as_float(spec.params, "l1_ratio", 0.5),
         )
     if spec.name == "rank_ridge_regression":
-        return RankRidgeRegressionModel(alpha=float(spec.params.get("alpha", spec.alpha_grid[0] if spec.alpha_grid else 1.0)))
+        return RankRidgeRegressionModel(alpha=_param_as_float(spec.params, "alpha", spec.alpha_grid[0] if spec.alpha_grid else 1.0))
     if spec.name == "gradient_boosting_regressor":
         return GradientBoostingRegressorModel(
-            n_estimators=int(spec.params.get("n_estimators", 24)),
-            learning_rate=float(spec.params.get("learning_rate", 0.05)),
-            max_bins=int(spec.params.get("max_bins", 12)),
-            min_leaf_size=int(spec.params.get("min_leaf_size", 16)),
+            n_estimators=_param_as_int(spec.params, "n_estimators", 24),
+            learning_rate=_param_as_float(spec.params, "learning_rate", 0.05),
+            max_bins=_param_as_int(spec.params, "max_bins", 12),
+            min_leaf_size=_param_as_int(spec.params, "min_leaf_size", 16),
             random_seed=spec.seed,
         )
     if spec.name == "gradient_boosting_ranker":
         return GradientBoostingRankerModel(
-            n_estimators=int(spec.params.get("n_estimators", 24)),
-            learning_rate=float(spec.params.get("learning_rate", 0.05)),
-            max_bins=int(spec.params.get("max_bins", 12)),
-            min_leaf_size=int(spec.params.get("min_leaf_size", 16)),
+            n_estimators=_param_as_int(spec.params, "n_estimators", 24),
+            learning_rate=_param_as_float(spec.params, "learning_rate", 0.05),
+            max_bins=_param_as_int(spec.params, "max_bins", 12),
+            min_leaf_size=_param_as_int(spec.params, "min_leaf_size", 16),
             random_seed=spec.seed,
         )
     raise KeyError(f"Unsupported model spec: {spec.name}")

@@ -23,7 +23,7 @@ class RepositoryPaths:
     root: Path
 
     @classmethod
-    def from_root(cls, root: Path | None = None) -> "RepositoryPaths":
+    def from_root(cls, root: Path | None = None) -> RepositoryPaths:
         return cls(root=find_repo_root(root))
 
     @property

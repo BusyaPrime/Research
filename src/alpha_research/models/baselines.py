@@ -1,11 +1,29 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 import hashlib
 import json
+from dataclasses import dataclass
+from typing import cast
 
 import numpy as np
 import pandas as pd
+
+
+def _param_as_float(params: dict[str, object], key: str, default: float) -> float:
+    value = params.get(key, default)
+    return float(value) if value is not None else float(default)
+
+
+def _param_as_int(params: dict[str, object], key: str, default: int) -> int:
+    value = cast(int | float | str | None, params.get(key, default))
+    return int(value) if value is not None else int(default)
+
+
+def _param_as_str_list(params: dict[str, object], key: str) -> list[str]:
+    value = params.get(key, [])
+    if isinstance(value, list):
+        return [str(item) for item in value]
+    return []
 
 
 def _weighted_mean(values: np.ndarray, weights: np.ndarray | None) -> float:
@@ -67,7 +85,7 @@ class RandomScoreModel:
     def __init__(self, seed: int = 42) -> None:
         self.seed = seed
 
-    def fit(self, frame: pd.DataFrame, feature_columns: list[str], label_column: str) -> "RandomScoreModel":
+    def fit(self, frame: pd.DataFrame, feature_columns: list[str], label_column: str) -> RandomScoreModel:
         return self
 
     def predict(self, frame: pd.DataFrame) -> np.ndarray:
@@ -85,7 +103,7 @@ class RandomScoreModel:
 class HeuristicReversalScoreModel:
     name = "heuristic_reversal_score"
 
-    def fit(self, frame: pd.DataFrame, feature_columns: list[str], label_column: str) -> "HeuristicReversalScoreModel":
+    def fit(self, frame: pd.DataFrame, feature_columns: list[str], label_column: str) -> HeuristicReversalScoreModel:
         return self
 
     def predict(self, frame: pd.DataFrame) -> np.ndarray:
@@ -98,7 +116,7 @@ class HeuristicReversalScoreModel:
 class HeuristicMomentumScoreModel:
     name = "heuristic_momentum_score"
 
-    def fit(self, frame: pd.DataFrame, feature_columns: list[str], label_column: str) -> "HeuristicMomentumScoreModel":
+    def fit(self, frame: pd.DataFrame, feature_columns: list[str], label_column: str) -> HeuristicMomentumScoreModel:
         return self
 
     def predict(self, frame: pd.DataFrame) -> np.ndarray:
@@ -111,7 +129,7 @@ class HeuristicMomentumScoreModel:
 class HeuristicBlendScoreModel:
     name = "heuristic_blend_score"
 
-    def fit(self, frame: pd.DataFrame, feature_columns: list[str], label_column: str) -> "HeuristicBlendScoreModel":
+    def fit(self, frame: pd.DataFrame, feature_columns: list[str], label_column: str) -> HeuristicBlendScoreModel:
         return self
 
     def predict(self, frame: pd.DataFrame) -> np.ndarray:
@@ -139,7 +157,7 @@ class RidgeRegressionModel:
         feature_columns: list[str],
         label_column: str,
         sample_weight: np.ndarray | None = None,
-    ) -> "RidgeRegressionModel":
+    ) -> RidgeRegressionModel:
         clean = frame[feature_columns + [label_column]].dropna()
         self.feature_columns_ = list(feature_columns)
         if clean.empty:
@@ -184,7 +202,7 @@ class LassoRegressionModel:
         self.coefficients_: np.ndarray | None = None
         self.intercept_: float = 0.0
 
-    def fit(self, frame: pd.DataFrame, feature_columns: list[str], label_column: str) -> "LassoRegressionModel":
+    def fit(self, frame: pd.DataFrame, feature_columns: list[str], label_column: str) -> LassoRegressionModel:
         clean = frame[feature_columns + [label_column]].dropna()
         self.feature_columns_ = list(feature_columns)
         if clean.empty:
@@ -236,7 +254,7 @@ def deserialize_model(artifact: ModelArtifact):
     from alpha_research.models.advanced_linear import ElasticNetRegressionModel, RankRidgeRegressionModel
 
     if artifact.model_name == RandomScoreModel.name:
-        return RandomScoreModel(seed=int(artifact.params.get("seed", 42)))
+        return RandomScoreModel(seed=_param_as_int(artifact.params, "seed", 42))
     if artifact.model_name == HeuristicReversalScoreModel.name:
         return HeuristicReversalScoreModel()
     if artifact.model_name == HeuristicMomentumScoreModel.name:
@@ -244,35 +262,35 @@ def deserialize_model(artifact: ModelArtifact):
     if artifact.model_name == HeuristicBlendScoreModel.name:
         return HeuristicBlendScoreModel()
     if artifact.model_name == RidgeRegressionModel.name:
-        model = RidgeRegressionModel(alpha=float(artifact.params.get("alpha", 1.0)))
-        model.feature_columns_ = list(artifact.params.get("feature_columns", []))
+        model = RidgeRegressionModel(alpha=_param_as_float(artifact.params, "alpha", 1.0))
+        model.feature_columns_ = _param_as_str_list(artifact.params, "feature_columns")
         model.coefficients_ = None if artifact.coefficients is None else np.asarray(artifact.coefficients, dtype="float64")
         model.intercept_ = float(artifact.intercept or 0.0)
         return model
     if artifact.model_name == LassoRegressionModel.name:
         model = LassoRegressionModel(
-            alpha=float(artifact.params.get("alpha", 1.0)),
-            max_iter=int(artifact.params.get("max_iter", 500)),
-            tolerance=float(artifact.params.get("tolerance", 1e-6)),
+            alpha=_param_as_float(artifact.params, "alpha", 1.0),
+            max_iter=_param_as_int(artifact.params, "max_iter", 500),
+            tolerance=_param_as_float(artifact.params, "tolerance", 1e-6),
         )
-        model.feature_columns_ = list(artifact.params.get("feature_columns", []))
+        model.feature_columns_ = _param_as_str_list(artifact.params, "feature_columns")
         model.coefficients_ = None if artifact.coefficients is None else np.asarray(artifact.coefficients, dtype="float64")
         model.intercept_ = float(artifact.intercept or 0.0)
         return model
     if artifact.model_name == ElasticNetRegressionModel.name:
         model = ElasticNetRegressionModel(
-            alpha=float(artifact.params.get("alpha", 1.0)),
-            l1_ratio=float(artifact.params.get("l1_ratio", 0.5)),
-            max_iter=int(artifact.params.get("max_iter", 800)),
-            tolerance=float(artifact.params.get("tolerance", 1e-6)),
+            alpha=_param_as_float(artifact.params, "alpha", 1.0),
+            l1_ratio=_param_as_float(artifact.params, "l1_ratio", 0.5),
+            max_iter=_param_as_int(artifact.params, "max_iter", 800),
+            tolerance=_param_as_float(artifact.params, "tolerance", 1e-6),
         )
-        model.feature_columns_ = list(artifact.params.get("feature_columns", []))
+        model.feature_columns_ = _param_as_str_list(artifact.params, "feature_columns")
         model.coefficients_ = None if artifact.coefficients is None else np.asarray(artifact.coefficients, dtype="float64")
         model.intercept_ = float(artifact.intercept or 0.0)
         return model
     if artifact.model_name == RankRidgeRegressionModel.name:
-        model = RankRidgeRegressionModel(alpha=float(artifact.params.get("alpha", 1.0)))
-        model.model_.feature_columns_ = list(artifact.params.get("feature_columns", []))
+        model = RankRidgeRegressionModel(alpha=_param_as_float(artifact.params, "alpha", 1.0))
+        model.model_.feature_columns_ = _param_as_str_list(artifact.params, "feature_columns")
         model.model_.coefficients_ = None if artifact.coefficients is None else np.asarray(artifact.coefficients, dtype="float64")
         model.model_.intercept_ = float(artifact.intercept or 0.0)
         return model

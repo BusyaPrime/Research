@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-
 import pandas as pd
 
 from alpha_research.data.providers.base import CorporateActionsProvider, FundamentalsProvider, MarketDataProvider, ProviderPage

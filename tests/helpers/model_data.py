@@ -22,7 +22,6 @@ def build_model_research_bundle() -> ModelResearchBundle:
     securities = [f"SEC_{idx:02d}" for idx in range(10)]
     rng = np.random.default_rng(123)
     rows: list[dict[str, object]] = []
-    day_index = np.arange(len(dates))
     for sec_idx, security_id in enumerate(securities):
         sec_noise = rng.normal(0.0, 0.02, size=len(dates))
         for i, date in enumerate(dates):

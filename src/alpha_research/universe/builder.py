@@ -2,12 +2,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-import numpy as np
 import pandas as pd
 
 from alpha_research.config.models import UniverseConfig
 from alpha_research.data.schemas import validate_dataframe
-
 
 EXCLUSION_ORDER = (
     ("security_type", "excluded_security_type"),

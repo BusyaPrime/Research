@@ -13,6 +13,12 @@ from alpha_research.evaluation.model_stability import (
     compute_hyperparameter_sensitivity,
     compute_model_stability_report,
 )
+from alpha_research.evaluation.reporting import (
+    render_executive_summary,
+    render_final_report,
+    render_final_report_html,
+    render_report_sections,
+)
 from alpha_research.evaluation.skepticism import (
     build_model_hypothesis_registry,
     compute_multiple_testing_diagnostics,
@@ -21,12 +27,6 @@ from alpha_research.evaluation.skepticism import (
     compute_predictive_uncertainty,
     compute_stability_gates,
     summarize_approval_recommendation,
-)
-from alpha_research.evaluation.reporting import (
-    render_executive_summary,
-    render_final_report,
-    render_final_report_html,
-    render_report_sections,
 )
 from tests.helpers.model_data import build_model_research_bundle
 

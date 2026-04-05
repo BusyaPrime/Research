@@ -7,7 +7,6 @@ import pandas as pd
 
 from alpha_research.evaluation.metrics import compute_predictive_metrics
 
-
 _NORMAL = NormalDist()
 
 

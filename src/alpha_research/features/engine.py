@@ -186,8 +186,6 @@ def build_feature_panel(
     close = grouped["close"]
     high = grouped["high"]
     low = grouped["low"]
-    open_px = grouped["open"]
-    volume = grouped["volume"]
     dollar_volume = grouped["dollar_volume"]
 
     for window in (1, 2, 3, 5, 10, 21, 63, 126, 252):
@@ -210,7 +208,6 @@ def build_feature_panel(
         lambda group: _rolling_beta(group["ret_1"], group["bench_ret_1"]),
     )
 
-    log_returns = np.log(panel["close"] / close.shift(1))
     for window in (5, 10, 21, 63):
         panel[f"vol_{window}"] = _group_transform_series(
             panel,

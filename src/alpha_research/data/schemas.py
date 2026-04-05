@@ -9,7 +9,6 @@ import yaml
 
 from alpha_research.common.paths import RepositoryPaths
 
-
 TYPE_MAP = {
     "string": "string",
     "float64": "float64",

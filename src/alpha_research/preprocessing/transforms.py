@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 import hashlib
+from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
@@ -13,7 +13,7 @@ class Winsorizer:
         self.upper_pct = upper_pct / 100.0 if upper_pct > 1 else upper_pct
         self.bounds_: dict[str, tuple[float, float]] = {}
 
-    def fit(self, frame: pd.DataFrame, feature_columns: list[str]) -> "Winsorizer":
+    def fit(self, frame: pd.DataFrame, feature_columns: list[str]) -> Winsorizer:
         self.bounds_ = {}
         for column in feature_columns:
             series = pd.to_numeric(frame[column], errors="coerce")
@@ -138,7 +138,7 @@ class FoldSafePreprocessor:
             feature_signature=signature,
         )
 
-    def fit(self, train_frame: pd.DataFrame) -> "FoldSafePreprocessor":
+    def fit(self, train_frame: pd.DataFrame) -> FoldSafePreprocessor:
         self.fit_metadata_ = self._build_fit_metadata(train_frame)
         if self.spec.winsor_lower is not None and self.spec.winsor_upper is not None:
             self.winsorizer_ = Winsorizer(self.spec.winsor_lower, self.spec.winsor_upper).fit(train_frame, self.feature_columns)

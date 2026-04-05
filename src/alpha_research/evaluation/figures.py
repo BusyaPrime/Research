@@ -8,7 +8,6 @@ import pandas as pd
 
 from alpha_research.evaluation.metrics import compute_predictive_metrics
 
-
 SVG_WIDTH = 960
 SVG_HEIGHT = 420
 PLOT_LEFT = 70

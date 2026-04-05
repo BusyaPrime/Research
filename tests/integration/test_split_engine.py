@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import pandas as pd
 import pytest
 
 from alpha_research.common.io import read_json

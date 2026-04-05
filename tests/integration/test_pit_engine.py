@@ -3,7 +3,7 @@ from __future__ import annotations
 import pandas as pd
 
 from alpha_research.pit.asof_join import asof_lookup, build_pit_diagnostics, pit_join_fundamentals
-from alpha_research.pit.builders import build_silver_fundamentals_pit, build_silver_market
+from alpha_research.pit.builders import build_silver_fundamentals_pit
 from alpha_research.pit.timestamp_guards import assert_no_future_available_from
 
 

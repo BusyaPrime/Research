@@ -29,6 +29,7 @@ dev = [
   "pytest>=9,<10",
   "ruff>=0.12,<1",
   "mypy>=1.18,<2",
+  "types-PyYAML>=6.0,<7",
   "pre-commit>=4.2,<5",
   "pip-tools>=7.4,<8",
 ]
@@ -42,3 +43,24 @@ where = ["src"]
 [tool.pytest.ini_options]
 addopts = "-q"
 testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 160
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+warn_unused_configs = true
+allow_redefinition = true
+check_untyped_defs = false
+exclude = ["tests"]
+disable_error_code = ["attr-defined", "assignment", "arg-type", "call-arg", "index", "return-value", "var-annotated"]
+
+[[tool.mypy.overrides]]
+module = ["yaml"]
+ignore_missing_imports = true
