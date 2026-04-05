@@ -52,6 +52,7 @@
 - `src/alpha_research/evaluation` — метрики и финальные отчеты.
 - `src/alpha_research/pipeline` — orchestration stage-by-stage.
 - `tests` — unit, integration, leakage и acceptance-покрытие.
+- `docs/status/spec_coverage_map.yaml` — machine-readable карта, которая связывает ключевые инварианты spec с кодом, тестами и артефактами.
 
 Разделение намеренно жесткое. Здесь лучше чуть дольше пожить с лишним модулем, чем потом выковыривать из одной функции одновременно и feature engineering, и торговую симуляцию, и поломанную временную ось.
 
@@ -91,6 +92,7 @@ python .\scripts\run_release_smoke.py --root . --mode live-public
 - `tests/leakage` — проверки на протечки;
 - `tests/integration` — сквозные куски пайплайна;
 - `tests/acceptance/acceptance_tests.yaml` — quality gates из спецификации.
+- `docs/status/spec_coverage_map.yaml` — быстрый способ проверить, где clause реально enforce'ится кодом, а не просто красиво описан.
 - `python .\scripts\verify_release_bundle.py --root .` — машинная проверка release bundle и связанных артефактов.
 - `python .\scripts\run_release_smoke.py --root .` — компактный operational smoke path с ingest, report и verifier.
 
@@ -108,3 +110,4 @@ python .\scripts\run_release_smoke.py --root . --mode live-public
 
 Для локального воспроизводимого прогона есть отдельный runbook: [reproducible_local_runbook.md](/E:/projecttype/docs/runbooks/reproducible_local_runbook.md).
 Для отдельного тяжелого smoke-прогона есть workflow [release_smoke.yml](/E:/projecttype/.github/workflows/release_smoke.yml).
+Для честной сверки реализации со спецификацией есть [spec_coverage_map.yaml](/E:/projecttype/docs/status/spec_coverage_map.yaml) и [spec_gap_audit.md](/E:/projecttype/docs/status/spec_gap_audit.md).

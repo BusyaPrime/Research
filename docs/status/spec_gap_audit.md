@@ -127,3 +127,28 @@ Baseline, linear path и boosting-модели уже едут в operational ru
 По текущей оценке проект находится в зоне `100%` от целевого состояния по `MASTER_SPEC.md`.
 
 Это рабочая исследовательская платформа с честным сквозным контуром, configured operational data path, dedicated benchmark adapter path, release verifier, config-driven release smoke profile и нормальным report/review bundle. На текущем этапе требования spec закрыты без оговорок; дальше уже начинается не добивка ТЗ, а обычная эксплуатационная жизнь системы.
+
+## Что это значит относительно более жесткого критерия 10/10
+
+Если мерить не только `MASTER_SPEC.md`, а более злой критерий из отдельного инженерного ревью, картина чуть менее глянцевая и от этого полезнее.
+
+Что уже дожали сверх базового DoD:
+
+- strict runtime policy теперь валит на неподдерживаемых operational режимах и не выдает degraded run за нормальный;
+- split protocol формализован и дополнительно прикрыт randomized invariant tests;
+- evaluation protocol, data-usage trace и approval gating уже живут как отдельный audit-ready контракт;
+- model layer получил tiered registry, advanced linear ranking path и отдельный model stability слой;
+- появился machine-readable spec coverage map, который уже связывает clause -> code -> tests -> artifacts.
+
+Что еще остается до совсем бесспорного “здесь не к чему подкопаться”:
+
+- orchestration все еще слишком тяготеет к тяжелому `runtime.py`, и его правильно было бы дальше резать на более явные stage runtimes;
+- randomized invariants уже есть, но полноценный mutation testing и более широкий property-based слой еще не закрыты;
+- execution/capacity реализм можно сделать еще злее через halted/no-open/liquidity cliff сценарии;
+- current model stack уже не ограничивается baseline'ами, но до максимально взрослого external ranking zoo еще есть пространство;
+- provenance хороший, но не полностью content-addressed на уровне immutable replay guarantee.
+
+Итог простой:
+
+- по `MASTER_SPEC.md` проект закрыт;
+- по расширенному критерию “бесспорный 10/10 без права на красивую ложь” проект уже очень близко, но еще не в финальной точке.

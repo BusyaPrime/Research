@@ -16,6 +16,23 @@ overall_status:
   statistical_skepticism_layer_present: true
   approval_summary_present: true
   metamorphic_invariants_present: true
+ten_out_of_ten_status:
+  completion_percent_estimate: 94
+  fully_closed: false
+  strongest_newly_closed_blocks:
+    - strict_operational_policy
+    - split_validation_protocol
+    - evaluation_manifest_and_data_usage_trace
+    - statistical_skepticism_and_approval_gating
+    - tiered_model_registry_and_stability_reports
+    - randomized_split_invariants
+    - spec_coverage_map
+  remaining_blocks:
+    - deeper_stage_runtime_decomposition
+    - richer_property_and_mutation_testing
+    - more_adversarial_execution_and_capacity_stress
+    - broader_external_model_backends_beyond_internal_reference_stack
+    - content_addressed_dataset_lineage_and_replay_hashing
 phase_status:
   analyze_and_map: completed
   foundation: completed
@@ -83,6 +100,12 @@ acceptance_coverage:
   metamorphic_invariants: covered
 temporary_simplifications: []
 open_gaps: []
+ten_out_of_ten_open_gaps:
+  - runtime orchestration все еще слишком тяжелый в одном центре и просится на более явный stage graph.
+  - Property-style randomized coverage уже есть, но mutation testing и более широкий генеративный слой еще не дожаты.
+  - Execution/capacity слой честный, но его можно сделать еще злее по halted/no-open/liquidity-cliff сценариям.
+  - Model layer уже сильнее baseline, но не дотягивается до максимально взрослого external GBDT/ranking zoo.
+  - Provenance хороший, но не полностью content-addressed на уровне immutable dataset replay.
 risk_level:
   time_semantics: low
   point_in_time_correctness: low
