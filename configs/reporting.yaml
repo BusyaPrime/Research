@@ -10,7 +10,9 @@ include_sections:
 - evaluation_protocol
 - uncertainty_analysis
 - false_discovery_control
+- model_registry
 - model_comparison
+- model_stability
 - backtest_results
 - cost_sensitivity
 - capacity_analysis

@@ -233,6 +233,8 @@ class LassoRegressionModel:
 
 
 def deserialize_model(artifact: ModelArtifact):
+    from alpha_research.models.advanced_linear import ElasticNetRegressionModel, RankRidgeRegressionModel
+
     if artifact.model_name == RandomScoreModel.name:
         return RandomScoreModel(seed=int(artifact.params.get("seed", 42)))
     if artifact.model_name == HeuristicReversalScoreModel.name:
@@ -256,6 +258,23 @@ def deserialize_model(artifact: ModelArtifact):
         model.feature_columns_ = list(artifact.params.get("feature_columns", []))
         model.coefficients_ = None if artifact.coefficients is None else np.asarray(artifact.coefficients, dtype="float64")
         model.intercept_ = float(artifact.intercept or 0.0)
+        return model
+    if artifact.model_name == ElasticNetRegressionModel.name:
+        model = ElasticNetRegressionModel(
+            alpha=float(artifact.params.get("alpha", 1.0)),
+            l1_ratio=float(artifact.params.get("l1_ratio", 0.5)),
+            max_iter=int(artifact.params.get("max_iter", 800)),
+            tolerance=float(artifact.params.get("tolerance", 1e-6)),
+        )
+        model.feature_columns_ = list(artifact.params.get("feature_columns", []))
+        model.coefficients_ = None if artifact.coefficients is None else np.asarray(artifact.coefficients, dtype="float64")
+        model.intercept_ = float(artifact.intercept or 0.0)
+        return model
+    if artifact.model_name == RankRidgeRegressionModel.name:
+        model = RankRidgeRegressionModel(alpha=float(artifact.params.get("alpha", 1.0)))
+        model.model_.feature_columns_ = list(artifact.params.get("feature_columns", []))
+        model.model_.coefficients_ = None if artifact.coefficients is None else np.asarray(artifact.coefficients, dtype="float64")
+        model.model_.intercept_ = float(artifact.intercept or 0.0)
         return model
     raise KeyError(f"Unsupported model artifact: {artifact.model_name}")
 

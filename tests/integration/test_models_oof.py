@@ -4,11 +4,10 @@ from functools import lru_cache
 
 import numpy as np
 import pandas as pd
-import pytest
 
+from alpha_research.models.advanced_linear import ElasticNetRegressionModel, RankRidgeRegressionModel
 from alpha_research.models.baselines import (
     LassoRegressionModel,
-    ModelArtifact,
     RidgeRegressionModel,
     deserialize_model,
 )
@@ -92,12 +91,18 @@ def test_ridge_and_lasso_wrappers_are_serializable() -> None:
     train = bundle.panel.iloc[:200].copy()
     ridge = RidgeRegressionModel(alpha=0.5).fit(train, bundle.feature_columns, bundle.label_column)
     lasso = LassoRegressionModel(alpha=0.01).fit(train, bundle.feature_columns, bundle.label_column)
+    elastic = ElasticNetRegressionModel(alpha=0.05, l1_ratio=0.4).fit(train, bundle.feature_columns, bundle.label_column)
+    rank_ridge = RankRidgeRegressionModel(alpha=0.5).fit(train, bundle.feature_columns, bundle.label_column)
 
     ridge_loaded = deserialize_model(ridge.to_artifact())
     lasso_loaded = deserialize_model(lasso.to_artifact())
+    elastic_loaded = deserialize_model(elastic.to_artifact())
+    rank_ridge_loaded = deserialize_model(rank_ridge.to_artifact())
     sample = train.iloc[:20].copy()
     np.testing.assert_allclose(ridge.predict(sample), ridge_loaded.predict(sample))
     np.testing.assert_allclose(lasso.predict(sample), lasso_loaded.predict(sample))
+    np.testing.assert_allclose(elastic.predict(sample), elastic_loaded.predict(sample))
+    np.testing.assert_allclose(rank_ridge.predict(sample), rank_ridge_loaded.predict(sample))
 
 
 def test_tuning_engine_does_not_touch_test_fold() -> None:
@@ -159,6 +164,7 @@ def test_prediction_manifests_contain_coverage_by_fold() -> None:
     assert result.manifest["oof_purity_checks"]["unique_prediction_rows"] is True
     assert not result.data_usage_trace.empty
     assert set(result.data_usage_trace.columns) >= {"fold_id", "model_name", "preprocessing_fit_scope", "final_fit_scope", "predict_scope"}
+    assert set(result.data_usage_trace["tuning_scope"]) == {"not_used"}
 
 
 def test_gradient_boosting_ranker_runs_in_oof_path_with_tuning() -> None:
@@ -177,6 +183,30 @@ def test_gradient_boosting_ranker_runs_in_oof_path_with_tuning() -> None:
     assert set(result.predictions["model_name"]) == {"gradient_boosting_ranker"}
     assert not result.tuning_diagnostics.empty
     assert metric > 0.15
+    assert set(result.data_usage_trace["tuning_scope"]) == {"valid_only"}
+
+
+def test_elastic_net_and_rank_ridge_run_in_oof_path() -> None:
+    bundle = _cached_bundle()
+    folds = _cached_folds()
+    result = generate_oof_predictions(
+        bundle.panel,
+        folds[:2],
+        model_specs=[
+            ModelRunSpec(name="elastic_net_regression", alpha_grid=(0.01, 0.1), seed=23),
+            ModelRunSpec(name="rank_ridge_regression", alpha_grid=(0.01, 0.1, 1.0), seed=23),
+        ],
+        feature_columns=bundle.feature_columns,
+        label_column=bundle.label_column,
+        dataset_version="ds_advanced_linear",
+    )
+    assert not result.predictions.empty
+    assert set(result.predictions["model_name"]) == {"elastic_net_regression", "rank_ridge_regression"}
+    assert {"alpha", "model_name"} <= set(result.tuning_diagnostics.columns)
+    assert "l1_ratio" in result.tuning_diagnostics.columns
+    tuning_scope = result.data_usage_trace.set_index("model_name")["tuning_scope"].to_dict()
+    assert tuning_scope["elastic_net_regression"] == "valid_only"
+    assert tuning_scope["rank_ridge_regression"] == "valid_only"
 
 
 def test_pure_train_only_protocol_is_explicit_in_data_usage_trace() -> None:

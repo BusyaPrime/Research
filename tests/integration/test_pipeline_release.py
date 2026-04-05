@@ -377,6 +377,7 @@ def test_run_report_builds_release_bundle_and_stable_regression_fixture(workspac
     assert review_bundle["report_html_path"]
     assert review_bundle["report_bundle_path"]
     assert review_bundle["key_metrics"]["primary_model_name"] == "gradient_boosting_ranker"
+    assert review_bundle["key_metrics"]["primary_model_tier"] == "tier_1"
     assert review_bundle["key_metrics"]["feature_count"] == 4
     assert review_bundle["key_metrics"]["fold_count"] >= 1
     assert review_bundle["key_metrics"]["dataset_row_count"] > 0
@@ -387,6 +388,9 @@ def test_run_report_builds_release_bundle_and_stable_regression_fixture(workspac
     assert report_bundle["figure_artifacts"]
     assert all(item["status"] == "generated" for item in report_bundle["figure_artifacts"])
     assert any(artifact["name"] == "ablation_results" for artifact in manifest["artifacts"])
+    assert any(artifact["name"] == "model_registry" for artifact in manifest["artifacts"])
+    assert any(artifact["name"] == "model_stability" for artifact in manifest["artifacts"])
+    assert any(artifact["name"] == "hyperparameter_sensitivity" for artifact in manifest["artifacts"])
     assert any(artifact["name"] == "predictive_uncertainty" for artifact in manifest["artifacts"])
     assert any(artifact["name"] == "approval_summary" for artifact in manifest["artifacts"])
 

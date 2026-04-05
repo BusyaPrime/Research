@@ -30,6 +30,7 @@ from alpha_research.evaluation.metrics import (
     compute_predictive_metrics,
     compute_regime_breakdown,
 )
+from alpha_research.evaluation.model_stability import compute_hyperparameter_sensitivity, compute_model_stability_report
 from alpha_research.evaluation.reporting import render_final_report, render_final_report_html, render_report_sections
 from alpha_research.evaluation.skepticism import (
     build_model_hypothesis_registry,
@@ -53,6 +54,7 @@ from alpha_research.pipeline.policy import (
     resolve_runtime_capability,
 )
 from alpha_research.preprocessing.transforms import PreprocessingSpec
+from alpha_research.models.registry import build_model_registry_frame, get_model_metadata
 from alpha_research.splits.engine import generate_walk_forward_splits, persist_fold_metadata
 from alpha_research.testing.leakage import assert_no_future_feature_timestamps
 from alpha_research.tracking.runtime import capture_runtime_metadata
@@ -97,6 +99,8 @@ SUPPORTED_MODEL_NAMES = {
     "heuristic_blend_score",
     "ridge_regression",
     "lasso_regression",
+    "elastic_net_regression",
+    "rank_ridge_regression",
     "gradient_boosting_regressor",
     "gradient_boosting_ranker",
 }
@@ -236,6 +240,8 @@ def _build_model_specs(experiment: ExperimentConfig, seed: int, paths: Repositor
         seed=seed,
     )
     secondary = [
+        ModelRunSpec(name="rank_ridge_regression", alpha_grid=(0.01, 0.1, 1.0, 10.0), seed=seed),
+        ModelRunSpec(name="elastic_net_regression", alpha_grid=(0.01, 0.1, 1.0), seed=seed),
         ModelRunSpec(name="heuristic_blend_score", seed=seed),
         ModelRunSpec(name="ridge_regression", alpha_grid=(0.1, 1.0, 10.0), seed=seed),
         ModelRunSpec(name="random_score", seed=seed),
@@ -287,7 +293,11 @@ def _best_tuned_params(tuning_diagnostics: pd.DataFrame, model_name: str) -> dic
     frame = tuning_diagnostics.loc[tuning_diagnostics["model_name"] == model_name].copy()
     if frame.empty:
         return {}
-    candidate_columns = [column for column in ("n_estimators", "learning_rate", "max_bins", "min_leaf_size") if column in frame.columns]
+    candidate_columns = [
+        column
+        for column in ("alpha", "l1_ratio", "n_estimators", "learning_rate", "max_bins", "min_leaf_size")
+        if column in frame.columns
+    ]
     if not candidate_columns:
         return {}
     best_row = frame.sort_values("validation_rank_ic_mean", ascending=False, kind="stable").iloc[0]
@@ -558,11 +568,18 @@ def execute_operational_command(
     artifacts.append(
         _persist_json_artifact(paths.root, manifests_dir / "oof_manifest.json", "oof_manifest", oof.manifest)
     )
+    active_model_names = sorted(oof.predictions["model_name"].dropna().unique().tolist())
+    model_registry = build_model_registry_frame()
+    active_model_registry = model_registry.loc[model_registry["name"].isin(active_model_names)].reset_index(drop=True)
+    artifacts.append(
+        _persist_frame(paths.root, diagnostics_dir / "model_registry.parquet", "model_registry", active_model_registry)
+    )
     evaluation_manifest = {
         "evaluation_protocol": loaded.bundle.runtime.evaluation_protocol,
         "fold_count": int(len(splits.folds)),
         "data_usage_trace_path": str((diagnostics_dir / "evaluation_data_usage_trace.parquet").relative_to(paths.root)),
         "oof_manifest_path": str((manifests_dir / "oof_manifest.json").relative_to(paths.root)),
+        "model_registry_path": str((diagnostics_dir / "model_registry.parquet").relative_to(paths.root)),
         "split_protocol": splits.protocol.to_dict(),
         "oof_purity_checks": oof.manifest["oof_purity_checks"],
     }
@@ -760,6 +777,24 @@ def execute_operational_command(
     artifacts.append(
         _persist_frame(paths.root, diagnostics_dir / "ablation_results.parquet", "ablation_results", ablation.results)
     )
+    hyperparameter_sensitivity = compute_hyperparameter_sensitivity(oof.tuning_diagnostics)
+    model_stability = compute_model_stability_report(
+        oof.predictions,
+        gold.panel[["date", "security_id", experiment.label]],
+        oof.tuning_diagnostics,
+        label_column=experiment.label,
+    )
+    artifacts.append(
+        _persist_frame(
+            paths.root,
+            diagnostics_dir / "hyperparameter_sensitivity.parquet",
+            "hyperparameter_sensitivity",
+            hyperparameter_sensitivity,
+        )
+    )
+    artifacts.append(
+        _persist_frame(paths.root, diagnostics_dir / "model_stability.parquet", "model_stability", model_stability)
+    )
     prediction_correlation = compute_prediction_correlation_matrix(oof.predictions)
     artifacts.append(
         _persist_frame(
@@ -832,6 +867,8 @@ def execute_operational_command(
         "model_hypotheses_path": str((diagnostics_dir / "model_hypotheses.parquet").relative_to(paths.root)),
         "multiple_testing_path": str((diagnostics_dir / "multiple_testing.parquet").relative_to(paths.root)),
         "stability_gates_path": str((diagnostics_dir / "stability_gates.parquet").relative_to(paths.root)),
+        "model_stability_path": str((diagnostics_dir / "model_stability.parquet").relative_to(paths.root)),
+        "hyperparameter_sensitivity_path": str((diagnostics_dir / "hyperparameter_sensitivity.parquet").relative_to(paths.root)),
         "effective_trial_count": effective_trial_count,
         "approval_status": approval_summary["status"],
     }
@@ -852,6 +889,7 @@ def execute_operational_command(
             }
         )
     model_comparison = pd.DataFrame(model_comparison_rows)
+    primary_model_metadata = get_model_metadata(primary_model_name)
     section_payloads = {
         "executive_summary": (
             f"Запуск `{run_id}` собрал датасет `{experiment.dataset_version}` на {len(gold.panel):,} строк, "
@@ -909,7 +947,52 @@ def execute_operational_command(
                 ),
             ]
         ),
+        "model_registry": "\n".join(
+            [
+                f"- primary_model_tier: {primary_model_metadata.tier}",
+                *(
+                    [
+                        (
+                            f"- {row['name']}: tier={row['tier']}, family={row['family']}, "
+                            f"objective={row['objective']}, grouped_ranking={row['supports_grouped_ranking']}, "
+                            f"tuning={row['tuning_strategy']}"
+                        )
+                        for row in active_model_registry.to_dict(orient="records")
+                    ]
+                    if not active_model_registry.empty
+                    else ["- active_models: 0"]
+                ),
+            ]
+        ),
         "model_comparison": "\n".join(_summary_lines_from_metrics(model_comparison)),
+        "model_stability": "\n".join(
+            [
+                *(
+                    [
+                        (
+                            f"- {row['model_name']}: rank_ic_mean={row['rank_ic_mean']}, "
+                            f"rank_ic_std={row['rank_ic_std']}, tuning_candidate_count={row['tuning_candidate_count']}, "
+                            f"best_minus_median_validation={row['best_minus_median_validation']}, "
+                            f"top2_gap_validation={row['top2_gap_validation']}"
+                        )
+                        for row in model_stability.to_dict(orient="records")
+                    ]
+                    if not model_stability.empty
+                    else ["- model_stability_rows: 0"]
+                ),
+                *(
+                    [
+                        (
+                            f"- sensitivity::{row['model_name']}: candidates={row['candidate_count']}, "
+                            f"best_validation={row['best_validation']}, median_validation={row['median_validation']}"
+                        )
+                        for row in hyperparameter_sensitivity.to_dict(orient="records")
+                    ]
+                    if not hyperparameter_sensitivity.empty
+                    else ["- sensitivity_rows: 0"]
+                ),
+            ]
+        ),
         "backtest_results": "\n".join(
             [
                 f"- primary_model: {primary_model_name}",
@@ -1119,6 +1202,7 @@ def execute_operational_command(
             "feature_count": int(len(feature_columns)),
             "fold_count": int(len(splits.folds)),
             "primary_model_name": primary_model_name,
+            "primary_model_tier": primary_model_metadata.tier,
             "net_sharpe": portfolio_metrics.set_index("metric")["value"].to_dict().get("net_sharpe"),
             "max_drawdown": portfolio_metrics.set_index("metric")["value"].to_dict().get("max_drawdown"),
             "ablation_rows": int(len(ablation.results)),

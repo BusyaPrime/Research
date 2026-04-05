@@ -9,6 +9,10 @@ from alpha_research.evaluation.metrics import (
     compute_predictive_metrics,
     compute_regime_breakdown,
 )
+from alpha_research.evaluation.model_stability import (
+    compute_hyperparameter_sensitivity,
+    compute_model_stability_report,
+)
 from alpha_research.evaluation.skepticism import (
     build_model_hypothesis_registry,
     compute_multiple_testing_diagnostics,
@@ -83,13 +87,25 @@ def test_decay_suite_builds_response_curve_by_horizons() -> None:
 def test_final_report_generator_includes_all_mandatory_sections() -> None:
     reporting_config = ReportingConfig(
         formats=["markdown"],
-        include_sections=["executive_summary", "uncertainty_analysis", "false_discovery_control", "backtest_results", "capacity_analysis", "regime_analysis", "decay_analysis", "ablation_analysis", "approval_summary", "limitations", "next_steps"],
+        include_sections=["executive_summary", "uncertainty_analysis", "false_discovery_control", "model_registry", "model_comparison", "model_stability", "backtest_results", "capacity_analysis", "regime_analysis", "decay_analysis", "ablation_analysis", "approval_summary", "limitations", "next_steps"],
         mandatory_figures=["ic_over_time", "equity_curve_net", "capacity_curve"],
     )
-    report = render_final_report(reporting_config, project_name="Alpha Platform", section_payloads={"backtest_results": "Тело бэктеста.", "ablation_analysis": "Тело ablation."})
+    report = render_final_report(
+        reporting_config,
+        project_name="Alpha Platform",
+        section_payloads={
+            "model_registry": "Реестр активных моделей.",
+            "model_stability": "Стабильность по фолдам.",
+            "backtest_results": "Тело бэктеста.",
+            "ablation_analysis": "Тело ablation.",
+        },
+    )
     assert "## Итог по запуску" in report
     assert "## Статистическая неопределенность" in report
     assert "## Контроль ложных открытий" in report
+    assert "## Реестр моделей" in report
+    assert "## Сравнение моделей" in report
+    assert "## Стабильность моделей" in report
     assert "## Результаты бэктеста" in report
     assert "## Анализ capacity" in report
     assert "## Анализ по режимам" in report
@@ -210,3 +226,35 @@ def test_prediction_correlation_matrix_tracks_model_similarity() -> None:
     cross_corr = matrix.loc[(matrix["model_name_left"] == "m1") & (matrix["model_name_right"] == "m2"), "prediction_correlation"].iloc[0]
     assert self_corr == 1.0
     assert cross_corr == 1.0
+
+
+def test_model_stability_suite_summarizes_fold_dispersion_and_tuning_sensitivity() -> None:
+    labels = pd.DataFrame(
+        [
+            {"date": pd.Timestamp("2024-01-02"), "security_id": "A", "label": 0.03},
+            {"date": pd.Timestamp("2024-01-02"), "security_id": "B", "label": 0.01},
+            {"date": pd.Timestamp("2024-01-03"), "security_id": "A", "label": 0.04},
+            {"date": pd.Timestamp("2024-01-03"), "security_id": "B", "label": 0.02},
+        ]
+    )
+    predictions = pd.DataFrame(
+        [
+            {"date": pd.Timestamp("2024-01-02"), "security_id": "A", "fold_id": "fold_001", "model_name": "elastic_net_regression", "raw_prediction": 0.20},
+            {"date": pd.Timestamp("2024-01-02"), "security_id": "B", "fold_id": "fold_001", "model_name": "elastic_net_regression", "raw_prediction": 0.10},
+            {"date": pd.Timestamp("2024-01-03"), "security_id": "A", "fold_id": "fold_002", "model_name": "elastic_net_regression", "raw_prediction": 0.25},
+            {"date": pd.Timestamp("2024-01-03"), "security_id": "B", "fold_id": "fold_002", "model_name": "elastic_net_regression", "raw_prediction": 0.15},
+        ]
+    )
+    tuning = pd.DataFrame(
+        [
+            {"model_name": "elastic_net_regression", "alpha": 0.01, "l1_ratio": 0.2, "validation_rank_ic_mean": 0.12},
+            {"model_name": "elastic_net_regression", "alpha": 0.10, "l1_ratio": 0.8, "validation_rank_ic_mean": 0.18},
+            {"model_name": "elastic_net_regression", "alpha": 1.00, "l1_ratio": 0.8, "validation_rank_ic_mean": 0.05},
+        ]
+    )
+    sensitivity = compute_hyperparameter_sensitivity(tuning)
+    stability = compute_model_stability_report(predictions, labels, tuning, label_column="label")
+    assert int(sensitivity.loc[0, "candidate_count"]) == 3
+    assert sensitivity.loc[0, "best_minus_median_validation"] > 0
+    assert stability.loc[0, "fold_count"] == 2
+    assert stability.loc[0, "tuning_candidate_count"] == 3

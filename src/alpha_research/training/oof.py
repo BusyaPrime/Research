@@ -6,6 +6,12 @@ import numpy as np
 import pandas as pd
 
 from alpha_research.data.schemas import validate_dataframe
+from alpha_research.models.advanced_linear import (
+    ElasticNetRegressionModel,
+    RankRidgeRegressionModel,
+    tune_elastic_net_model,
+    tune_rank_ridge_model,
+)
 from alpha_research.models.baselines import (
     HeuristicBlendScoreModel,
     HeuristicMomentumScoreModel,
@@ -55,6 +61,13 @@ def _instantiate_model(spec: ModelRunSpec):
         return RidgeRegressionModel(alpha=float(spec.alpha_grid[0] if spec.alpha_grid else 1.0))
     if spec.name == "lasso_regression":
         return LassoRegressionModel(alpha=float(spec.alpha_grid[0] if spec.alpha_grid else 1.0))
+    if spec.name == "elastic_net_regression":
+        return ElasticNetRegressionModel(
+            alpha=float(spec.params.get("alpha", spec.alpha_grid[0] if spec.alpha_grid else 1.0)),
+            l1_ratio=float(spec.params.get("l1_ratio", 0.5)),
+        )
+    if spec.name == "rank_ridge_regression":
+        return RankRidgeRegressionModel(alpha=float(spec.params.get("alpha", spec.alpha_grid[0] if spec.alpha_grid else 1.0)))
     if spec.name == "gradient_boosting_regressor":
         return GradientBoostingRegressorModel(
             n_estimators=int(spec.params.get("n_estimators", 24)),
@@ -196,12 +209,52 @@ def generate_oof_predictions(
         for spec in model_specs:
             tuned_alpha = None
             model = _instantiate_model(spec)
+            tuning_usage_frame = valid_frame.iloc[0:0].copy()
             if spec.name in {"ridge_regression", "lasso_regression"} and spec.alpha_grid:
                 tuned_alpha, tuning_frame = tune_linear_model_alpha(spec.name, list(spec.alpha_grid), train_frame, valid_frame, feature_columns, label_column)
                 tuning_frame["fold_id"] = fold.fold_id
                 tuning_frame["model_name"] = spec.name
                 tuning_rows.extend(tuning_frame.to_dict(orient="records"))
+                tuning_usage_frame = valid_frame.copy()
                 model = RidgeRegressionModel(alpha=tuned_alpha) if spec.name == "ridge_regression" else LassoRegressionModel(alpha=tuned_alpha)
+            elif spec.name == "elastic_net_regression":
+                tuned_params = dict(spec.params)
+                if not tuned_params:
+                    tuned = tune_elastic_net_model(
+                        alpha_grid=list(spec.alpha_grid) if spec.alpha_grid else [0.01, 0.1, 1.0],
+                        l1_ratio_grid=[0.2, 0.5, 0.8],
+                        train_frame=train_frame,
+                        valid_frame=valid_frame,
+                        feature_columns=feature_columns,
+                        label_column=label_column,
+                    )
+                    tuning_frame = tuned.diagnostics.copy()
+                    tuning_frame["fold_id"] = fold.fold_id
+                    tuning_frame["model_name"] = spec.name
+                    tuning_rows.extend(tuning_frame.to_dict(orient="records"))
+                    tuning_usage_frame = valid_frame.copy()
+                    tuned_params = dict(tuned.best_params)
+                model = ElasticNetRegressionModel(
+                    alpha=float(tuned_params.get("alpha", spec.alpha_grid[0] if spec.alpha_grid else 1.0)),
+                    l1_ratio=float(tuned_params.get("l1_ratio", 0.5)),
+                )
+            elif spec.name == "rank_ridge_regression":
+                tuned_params = dict(spec.params)
+                if not tuned_params:
+                    tuned = tune_rank_ridge_model(
+                        alpha_grid=list(spec.alpha_grid) if spec.alpha_grid else [0.01, 0.1, 1.0, 10.0],
+                        train_frame=train_frame,
+                        valid_frame=valid_frame,
+                        feature_columns=feature_columns,
+                        label_column=label_column,
+                    )
+                    tuning_frame = tuned.diagnostics.copy()
+                    tuning_frame["fold_id"] = fold.fold_id
+                    tuning_frame["model_name"] = spec.name
+                    tuning_rows.extend(tuning_frame.to_dict(orient="records"))
+                    tuning_usage_frame = valid_frame.copy()
+                    tuned_params = dict(tuned.best_params)
+                model = RankRidgeRegressionModel(alpha=float(tuned_params.get("alpha", spec.alpha_grid[0] if spec.alpha_grid else 1.0)))
             elif spec.name in {"gradient_boosting_regressor", "gradient_boosting_ranker"}:
                 tuned_params = dict(spec.params)
                 if not tuned_params:
@@ -217,6 +270,7 @@ def generate_oof_predictions(
                     tuning_frame["fold_id"] = fold.fold_id
                     tuning_frame["model_name"] = spec.name
                     tuning_rows.extend(tuning_frame.to_dict(orient="records"))
+                    tuning_usage_frame = valid_frame.copy()
                 tuned_spec = ModelRunSpec(name=spec.name, params=tuned_params, seed=spec.seed, n_trials=spec.n_trials)
                 model = _instantiate_model(tuned_spec)
 
@@ -245,7 +299,7 @@ def generate_oof_predictions(
                     model_name=spec.name,
                     protocol=evaluation_protocol,
                     preprocessing_fit_frame=preprocessing_fit_frame,
-                    tuning_frame=valid_frame,
+                    tuning_frame=tuning_usage_frame,
                     final_fit_frame=fit_frame,
                     predict_frame=test_frame,
                 )

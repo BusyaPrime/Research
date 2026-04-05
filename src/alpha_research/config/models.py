@@ -168,9 +168,16 @@ class SampleWeightsConfig(FrozenModel):
     policy: str
 
 
+class ModelTierConfig(FrozenModel):
+    tier_0: list[str]
+    tier_1: list[str]
+    tier_2: list[str]
+
+
 class ModelsConfig(FrozenModel):
     baseline_models: list[str]
     advanced_models: list[str]
+    model_tiers: ModelTierConfig | None = None
     tuning: TuningConfig
     sample_weights: SampleWeightsConfig
 
