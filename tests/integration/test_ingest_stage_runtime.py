@@ -7,11 +7,12 @@ from alpha_research.pipeline.stages import run_stage_command
 def test_ingest_stage_commands_run_with_runtime_stub_adapter(minimal_repo) -> None:
     loaded = load_resolved_config_bundle(minimal_repo)
 
+    reference = run_stage_command("build-reference", minimal_repo, loaded)
     market = run_stage_command("ingest-market", minimal_repo, loaded)
     fundamentals = run_stage_command("ingest-fundamentals", minimal_repo, loaded)
     corporate_actions = run_stage_command("ingest-corporate-actions", minimal_repo, loaded)
 
-    for payload in (market, fundamentals, corporate_actions):
+    for payload in (reference, market, fundamentals, corporate_actions):
         assert payload["status"] == "completed"
         assert payload["manifest_path"]
         assert payload["primary_artifact_path"]

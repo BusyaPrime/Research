@@ -1,9 +1,11 @@
 market_provider:
   name: adapter_placeholder
   priority:
+  - stooq_eod_http
   - institutional_vendor
   - polygon_like
   - alpha_vantage_like
+  - synthetic_vendor_stub
   fields_required:
   - open
   - high
@@ -15,6 +17,20 @@ market_provider:
   - trade_date
   save_raw_payload: true
   save_request_manifest: true
+  adapters:
+  - adapter_name: stooq_eod_http
+    adapter_type: stooq_eod_http
+    enabled: false
+    base_url: https://stooq.com/q/d/l/
+    timeout_seconds: 30
+    symbol_template: "{symbol}.us"
+  - adapter_name: local_file_market_daily
+    adapter_type: local_file_market_daily
+    enabled: false
+    local_path_env: ARP_MARKET_DAILY_FILE
+  - adapter_name: synthetic_vendor_stub
+    adapter_type: synthetic_vendor_stub
+    enabled: true
 fundamentals_provider:
   name: sec_or_vendor_adapter
   fields_required:
@@ -27,6 +43,21 @@ fundamentals_provider:
   - company_id
   available_from_policy: max(acceptance_datetime, filing_date_end_of_day)
   restatement_tracking: true
+  adapters:
+  - adapter_name: sec_companyfacts_http
+    adapter_type: sec_companyfacts_http
+    enabled: false
+    base_url: https://data.sec.gov/api/xbrl/companyfacts
+    timeout_seconds: 30
+    user_agent_env: ARP_SEC_USER_AGENT
+    source_company_id_column: source_company_id
+  - adapter_name: local_file_fundamentals
+    adapter_type: local_file_fundamentals
+    enabled: false
+    local_path_env: ARP_FUNDAMENTALS_FILE
+  - adapter_name: synthetic_vendor_stub
+    adapter_type: synthetic_vendor_stub
+    enabled: true
 corporate_actions_provider:
   required_events:
   - split
@@ -34,6 +65,41 @@ corporate_actions_provider:
   - delisting
   - symbol_change
   save_raw_payload: true
+  adapters:
+  - adapter_name: local_file_corporate_actions
+    adapter_type: local_file_corporate_actions
+    enabled: false
+    local_path_env: ARP_CORPORATE_ACTIONS_FILE
+  - adapter_name: synthetic_vendor_stub
+    adapter_type: synthetic_vendor_stub
+    enabled: true
+benchmark_provider:
+  name: benchmark_proxy_or_index_adapter
+  priority:
+  - local_file_benchmark
+  - stooq_benchmark_http
+  fields_required:
+  - trade_date
+  - open
+  - high
+  - low
+  - close
+  save_raw_payload: true
+  save_request_manifest: false
+  adapters:
+  - adapter_name: local_file_benchmark
+    adapter_type: local_file_benchmark
+    enabled: false
+    local_path_env: ARP_BENCHMARK_FILE
+  - adapter_name: stooq_benchmark_http
+    adapter_type: stooq_benchmark_http
+    enabled: false
+    base_url: https://stooq.com/q/d/l/
+    timeout_seconds: 30
+    request_symbol: spy.us
+  - adapter_name: market_panel_proxy
+    adapter_type: market_panel_proxy
+    enabled: true
 security_master_provider:
   required_fields:
   - security_id
@@ -43,3 +109,11 @@ security_master_provider:
   - exchange
   - security_type
   ticker_is_not_primary_key: true
+  adapters:
+  - adapter_name: local_file_security_master
+    adapter_type: local_file_security_master
+    enabled: false
+    local_path_env: ARP_SECURITY_MASTER_FILE
+  - adapter_name: synthetic_vendor_stub
+    adapter_type: synthetic_vendor_stub
+    enabled: true

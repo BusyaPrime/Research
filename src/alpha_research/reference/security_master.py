@@ -14,7 +14,7 @@ def build_security_master(raw_frame: pd.DataFrame, root: Path | None = None) -> 
     frame["security_type"] = frame["security_type"].astype("string").str.lower()
     frame["symbol"] = frame["symbol"].astype("string").str.upper()
     frame["is_common_stock"] = frame["is_common_stock"].astype("boolean")
-    validated = validate_dataframe(frame, "security_master", root=root)
+    validated = validate_dataframe(frame, "security_master", root=root, allow_extra=True)
 
     listing_dates = pd.to_datetime(validated["listing_date"], errors="coerce")
     delisting_dates = pd.to_datetime(validated["delisting_date"], errors="coerce")

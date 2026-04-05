@@ -52,6 +52,25 @@ class ProviderConfig(FrozenModel):
     restatement_tracking: bool | None = None
     required_fields: list[str] | None = None
     ticker_is_not_primary_key: bool | None = None
+    adapters: list["AdapterConfig"] | None = None
+
+
+class AdapterConfig(FrozenModel):
+    adapter_name: str
+    adapter_type: str
+    enabled: bool = True
+    base_url: str | None = None
+    timeout_seconds: int = 30
+    local_path: str | None = None
+    local_path_env: str | None = None
+    api_key_env: str | None = None
+    api_key_query_param: str | None = None
+    api_key_header: str | None = None
+    user_agent_env: str | None = None
+    source_company_id_column: str | None = None
+    symbol_template: str | None = None
+    request_symbol: str | None = None
+    default_headers: dict[str, str] | None = None
 
 
 class DataSourcesConfig(FrozenModel):
@@ -59,6 +78,7 @@ class DataSourcesConfig(FrozenModel):
     fundamentals_provider: ProviderConfig
     corporate_actions_provider: ProviderConfig
     security_master_provider: ProviderConfig
+    benchmark_provider: ProviderConfig
 
 
 class CalendarConfig(FrozenModel):
@@ -243,7 +263,7 @@ class ReportingConfig(FrozenModel):
 
 
 class RuntimeIngestConfig(FrozenModel):
-    provider_mode: Literal["synthetic_vendor_stub"]
+    provider_mode: Literal["synthetic_vendor_stub", "configured_adapters"]
     default_start_date: str
     default_end_date: str
     default_n_securities: int
@@ -259,6 +279,8 @@ class RuntimeReleaseSmokeConfig(FrozenModel):
     experiment_key: str
     max_model_trials: int
     cost_scenarios: list[str]
+    provider_mode_override: Literal["synthetic_vendor_stub", "configured_adapters"] | None = None
+    prepare_local_configured_fixtures: bool = False
     universe: UniverseConfig
     splits: SplitsConfig
     capacity: CapacityConfig

@@ -34,7 +34,8 @@ from alpha_research.evaluation.reporting import render_final_report, render_fina
 from alpha_research.features.engine import FeatureBuildResult, build_feature_panel
 from alpha_research.features.registry import feature_names_by_family, load_feature_registry
 from alpha_research.labels.engine import build_label_panel
-from alpha_research.pipeline.fixture_data import build_synthetic_research_bundle
+from alpha_research.pipeline.bundle_loader import resolve_operational_bundle
+from alpha_research.pipeline.fixture_data import SyntheticResearchBundle
 from alpha_research.preprocessing.transforms import PreprocessingSpec
 from alpha_research.splits.engine import generate_walk_forward_splits, persist_fold_metadata
 from alpha_research.testing.leakage import assert_no_future_feature_timestamps
@@ -308,16 +309,39 @@ def _feature_catalog_summary(feature_columns: list[str], root: Path) -> str:
     return "\n".join(lines)
 
 
+def _source_mode_label(loaded: LoadedConfigBundle, synthetic_bundle: SyntheticResearchBundle | None) -> str:
+    if synthetic_bundle is not None:
+        return "explicit_synthetic_bundle_override"
+    return loaded.bundle.runtime.ingest.provider_mode
+
+
+def _next_steps_for_source_mode(source_mode: str) -> list[str]:
+    if source_mode == "configured_adapters":
+        return [
+            "Проверить live adapter path против реального поставщика на rate limits, schema drift и secrets rotation.",
+            "Дожать clean-room reproducible handoff на живом external data path без ручных оговорок.",
+            "Расширить adapter layer вокруг benchmark/index feed и vendor-specific operational diagnostics.",
+        ]
+    return [
+        "Заменить synthetic provider stub на реальные vendor adapters и нормальный secrets flow.",
+        "Проверить operational ingest path против живого поставщика с rate limits и schema drift.",
+        "Дожать release-hardening до clean-room reproducible handoff без ручных оговорок.",
+    ]
+
+
 def execute_operational_command(
     command_name: str,
     paths: RepositoryPaths,
     loaded: LoadedConfigBundle,
     *,
-    synthetic_bundle=None,
+    synthetic_bundle: SyntheticResearchBundle | None = None,
     split_config: SplitsConfig | None = None,
     capacity_config: CapacityConfig | None = None,
     universe_config: UniverseConfig | None = None,
     cost_scenarios: list[str] | None = None,
+    bundle_start_date: str | None = None,
+    bundle_end_date: str | None = None,
+    bundle_n_securities: int | None = None,
 ) -> OperationalRunResult:
     if command_name not in OPERATIONAL_COMMANDS:
         raise KeyError(f"Unsupported operational command: {command_name}")
@@ -334,9 +358,18 @@ def execute_operational_command(
         directory.mkdir(parents=True, exist_ok=True)
     report_sections_dir.mkdir(parents=True, exist_ok=True)
 
-    bundle = synthetic_bundle or build_synthetic_research_bundle(seed=loaded.bundle.project.default_random_seed)
+    bundle = resolve_operational_bundle(
+        paths,
+        loaded,
+        synthetic_bundle=synthetic_bundle,
+        start_date=bundle_start_date,
+        end_date=bundle_end_date,
+        n_securities=bundle_n_securities,
+    )
+    source_mode = _source_mode_label(loaded, synthetic_bundle)
     experiment, experiment_notes = _select_experiment(loaded)
     notes = [*bundle.notes, *experiment_notes]
+    next_steps = _next_steps_for_source_mode(source_mode)
     active_split_config = split_config or loaded.bundle.splits
     active_capacity_config = capacity_config or loaded.bundle.capacity
     active_universe_config = universe_config or loaded.bundle.universe
@@ -727,7 +760,8 @@ def execute_operational_command(
                 f"- dataset_version: {experiment.dataset_version}",
                 f"- config_hash: {loaded.config_hash}",
                 f"- git_commit_hash: {capture_runtime_metadata(paths.root).git_commit_hash}",
-                "- source_bundle: deterministic synthetic vendor stub",
+                f"- source_mode: {source_mode}",
+                f"- benchmark_mode: {'equal_weight_proxy_from_market_panel' if source_mode == 'configured_adapters' else 'synthetic_fixture_bundle'}",
             ]
         ),
         "feature_catalog": _feature_catalog_summary(feature_columns, paths.root),
@@ -764,11 +798,7 @@ def execute_operational_command(
         limitations=[
             *notes,
         ],
-        next_steps=[
-            "Заменить synthetic provider stub на реальные vendor adapters и нормальный secrets flow.",
-            "Проверить operational ingest path против живого поставщика с rate limits и schema drift.",
-            "Дожать release-hardening до clean-room reproducible handoff без ручных оговорок.",
-        ],
+        next_steps=next_steps,
     )
     rendered_sections = render_report_sections(
         loaded.bundle.reporting,
@@ -776,11 +806,7 @@ def execute_operational_command(
         limitations=[
             *notes,
         ],
-        next_steps=[
-            "Заменить synthetic provider stub на реальные vendor adapters и нормальный secrets flow.",
-            "Проверить operational ingest path против живого поставщика с rate limits и schema drift.",
-            "Дожать release-hardening до clean-room reproducible handoff без ручных оговорок.",
-        ],
+        next_steps=next_steps,
     )
     report_path = report_dir / "final_report.md"
     report_path.write_text(report_text, encoding="utf-8")
@@ -825,11 +851,7 @@ def execute_operational_command(
             limitations=[
                 *notes,
             ],
-            next_steps=[
-                "Заменить synthetic provider stub на реальные vendor adapters и нормальный secrets flow.",
-                "Проверить operational ingest path против живого поставщика с rate limits и schema drift.",
-                "Дожать release-hardening до clean-room reproducible handoff без ручных оговорок.",
-            ],
+            next_steps=next_steps,
         )
         report_html_path = report_dir / "final_report.html"
         report_html_path.write_text(report_html, encoding="utf-8")

@@ -5,7 +5,7 @@ from pathlib import Path
 from alpha_research.config.loader import LoadedConfigBundle
 from alpha_research.pipeline.runtime import OPERATIONAL_COMMANDS, execute_operational_command
 from alpha_research.common.paths import RepositoryPaths
-from alpha_research.pipeline.ingest_runtime import run_ingest_command
+from alpha_research.pipeline.ingest_runtime import run_ingest_command, run_reference_command
 
 
 STAGE_COMMANDS = (
@@ -59,6 +59,17 @@ def build_stub_response(command_name: str, root: Path, loaded: LoadedConfigBundl
 
 
 def run_stage_command(command_name: str, root: Path, loaded: LoadedConfigBundle) -> dict[str, object]:
+    if command_name == "build-reference":
+        result = run_reference_command(root, loaded)
+        return {
+            "command": command_name,
+            "status": "completed",
+            "root": str(root),
+            "config_hash": loaded.config_hash,
+            "manifest_path": str(result.manifest_path.relative_to(root)),
+            "primary_artifact_path": str(result.primary_artifact_path.relative_to(root)),
+            "notes": result.notes,
+        }
     if command_name in {"ingest-market", "ingest-fundamentals", "ingest-corporate-actions"}:
         result = run_ingest_command(command_name, root, loaded)
         return {
