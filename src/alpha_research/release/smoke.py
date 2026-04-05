@@ -47,16 +47,40 @@ def _build_smoke_loaded(loaded: LoadedConfigBundle) -> LoadedConfigBundle:
         runtime_bundle = runtime_bundle.model_copy(
             update={"ingest": runtime_bundle.ingest.model_copy(update={"provider_mode": smoke.provider_mode_override})}
         )
+    if smoke.preferred_symbols is not None and not smoke.prepare_local_configured_fixtures:
+        runtime_bundle = runtime_bundle.model_copy(
+            update={"ingest": runtime_bundle.ingest.model_copy(update={"symbol_allowlist": list(smoke.preferred_symbols)})}
+        )
     smoke_bundle = loaded.bundle.model_copy(update={"experiments": {smoke.experiment_key: smoke_experiment}, "runtime": runtime_bundle})
     return replace(loaded, bundle=smoke_bundle, config_hash=hash_mapping(smoke_bundle.model_dump(mode="json")))
 
 
-def run_release_smoke(root: Path | None = None, *, extra_policy: str = "forbid") -> ReleaseSmokeResult:
+def run_release_smoke(
+    root: Path | None = None,
+    *,
+    extra_policy: str = "forbid",
+    provider_mode_override: str | None = None,
+    prepare_local_configured_fixtures_override: bool | None = None,
+) -> ReleaseSmokeResult:
     paths = RepositoryPaths.from_root(root)
     loaded = load_resolved_config_bundle(paths.root, extra_policy=extra_policy)
     smoke = loaded.bundle.runtime.release_smoke
     if not smoke.enabled:
         raise RuntimeError("Release smoke profile отключен в configs/runtime.yaml.")
+
+    if provider_mode_override is not None or prepare_local_configured_fixtures_override is not None:
+        smoke_override = smoke.model_copy(
+            update={
+                "provider_mode_override": provider_mode_override if provider_mode_override is not None else smoke.provider_mode_override,
+                "prepare_local_configured_fixtures": (
+                    prepare_local_configured_fixtures_override
+                    if prepare_local_configured_fixtures_override is not None
+                    else smoke.prepare_local_configured_fixtures
+                ),
+            }
+        )
+        loaded = replace(loaded, bundle=loaded.bundle.model_copy(update={"runtime": loaded.bundle.runtime.model_copy(update={"release_smoke": smoke_override})}))
+        smoke = smoke_override
 
     smoke_loaded = _build_smoke_loaded(loaded)
     synthetic_bundle = None

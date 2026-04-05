@@ -268,6 +268,7 @@ class RuntimeIngestConfig(FrozenModel):
     default_end_date: str
     default_n_securities: int
     page_size: int
+    symbol_allowlist: list[str] | None = None
 
 
 class RuntimeReleaseSmokeConfig(FrozenModel):
@@ -281,6 +282,7 @@ class RuntimeReleaseSmokeConfig(FrozenModel):
     cost_scenarios: list[str]
     provider_mode_override: Literal["synthetic_vendor_stub", "configured_adapters"] | None = None
     prepare_local_configured_fixtures: bool = False
+    preferred_symbols: list[str] | None = None
     universe: UniverseConfig
     splits: SplitsConfig
     capacity: CapacityConfig

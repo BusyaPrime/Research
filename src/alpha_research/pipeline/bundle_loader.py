@@ -19,9 +19,27 @@ from alpha_research.time.calendar import ExchangeCalendarAdapter
 
 def _selected_security_master(security_master: pd.DataFrame, n_securities: int | None) -> pd.DataFrame:
     frame = security_master.copy()
+    allowlist = []
+    if "symbol_allowlist" in frame.attrs and frame.attrs["symbol_allowlist"]:
+        allowlist = [str(symbol).upper() for symbol in frame.attrs["symbol_allowlist"]]
+    if allowlist:
+        frame = frame.loc[frame["symbol"].astype("string").str.upper().isin(allowlist)].copy()
+    symbol_series = frame["symbol"].astype("string")
+    frame["_priority_common_stock"] = frame.get("is_common_stock", pd.Series(False, index=frame.index)).fillna(False).astype(bool)
+    frame["_priority_exchange"] = frame.get("exchange", pd.Series(index=frame.index, dtype="string")).astype("string").isin(["NYSE", "NASDAQ"])
+    frame["_priority_symbol"] = symbol_series.str.fullmatch(r"[A-Z]{1,5}", na=False)
     if n_securities is None or n_securities <= 0 or len(frame) <= n_securities:
-        return frame.reset_index(drop=True)
-    return frame.sort_values(["symbol", "security_id"], kind="stable").head(n_securities).reset_index(drop=True)
+        return frame.sort_values(["_priority_common_stock", "_priority_exchange", "_priority_symbol", "symbol", "security_id"], ascending=[False, False, False, True, True], kind="stable").drop(columns=["_priority_common_stock", "_priority_exchange", "_priority_symbol"], errors="ignore").reset_index(drop=True)
+    return (
+        frame.sort_values(
+            ["_priority_common_stock", "_priority_exchange", "_priority_symbol", "symbol", "security_id"],
+            ascending=[False, False, False, True, True],
+            kind="stable",
+        )
+        .head(n_securities)
+        .drop(columns=["_priority_common_stock", "_priority_exchange", "_priority_symbol"], errors="ignore")
+        .reset_index(drop=True)
+    )
 
 
 def _company_ids_from_security_master(raw_security_master: pd.DataFrame, security_ids: set[str]) -> list[str]:
@@ -90,7 +108,9 @@ def build_configured_research_bundle(
     except ConfiguredAdapterError as exc:
         raise KeyError(f"Configured bundle adapters error: {exc}") from exc
 
-    security_master = _selected_security_master(context.security_master, n_securities)
+    security_master_candidate = context.security_master.copy()
+    security_master_candidate.attrs["symbol_allowlist"] = runtime_ingest.symbol_allowlist
+    security_master = _selected_security_master(security_master_candidate, n_securities)
     security_ids = set(security_master["security_id"].dropna().astype("string").tolist())
     symbol_mapper = SymbolMapper(security_master)
     symbols = security_master["symbol"].dropna().astype("string").str.upper().tolist()

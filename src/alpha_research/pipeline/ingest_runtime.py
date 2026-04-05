@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+import pandas as pd
+
 from alpha_research.common.io import write_json, write_parquet
 from alpha_research.common.paths import RepositoryPaths
 from alpha_research.config.loader import LoadedConfigBundle
@@ -25,6 +27,24 @@ class IngestStageResult:
     manifest_path: Path
     primary_artifact_path: Path
     notes: list[str]
+
+
+def _limit_security_master_frame(security_master_frame, runtime_ingest_config):
+    frame = security_master_frame.copy()
+    allowlist = [str(symbol).upper() for symbol in (runtime_ingest_config.symbol_allowlist or [])]
+    if allowlist:
+        frame = frame.loc[frame["symbol"].astype("string").str.upper().isin(allowlist)].copy()
+    symbol_series = frame["symbol"].astype("string")
+    frame["_priority_common_stock"] = frame.get("is_common_stock", False).fillna(False).astype(bool)
+    frame["_priority_exchange"] = frame.get("exchange", pd.Series(index=frame.index, dtype="string")).astype("string").isin(["NYSE", "NASDAQ"])
+    frame["_priority_symbol"] = symbol_series.str.fullmatch(r"[A-Z]{1,5}", na=False)
+    if runtime_ingest_config.default_n_securities > 0 and len(frame) > runtime_ingest_config.default_n_securities:
+        frame = frame.sort_values(
+            ["_priority_common_stock", "_priority_exchange", "_priority_symbol", "symbol", "security_id"],
+            ascending=[False, False, False, True, True],
+            kind="stable",
+        ).head(runtime_ingest_config.default_n_securities)
+    return frame.drop(columns=["_priority_common_stock", "_priority_exchange", "_priority_symbol"], errors="ignore").reset_index(drop=True)
 
 
 def _build_runtime_bundle(paths: RepositoryPaths, loaded: LoadedConfigBundle):
@@ -112,7 +132,7 @@ def run_ingest_command(command_name: str, root: Path, loaded: LoadedConfigBundle
             context = build_configured_ingest_context(paths.root, loaded)
         except ConfiguredAdapterError as exc:
             raise KeyError(f"Configured ingest adapters error: {exc}") from exc
-        security_master_frame = context.security_master
+        security_master_frame = _limit_security_master_frame(context.security_master, loaded.bundle.runtime.ingest)
         mapper = context.symbol_mapper
         notes = [
             *context.notes,
@@ -124,7 +144,17 @@ def run_ingest_command(command_name: str, root: Path, loaded: LoadedConfigBundle
         symbols = security_master_frame["symbol"].dropna().astype("string").str.upper().tolist()
         source_company_column = "source_company_id"
         if source_company_column in context.security_master_raw.columns:
-            company_ids = context.security_master_raw[source_company_column].dropna().astype("string").str.upper().unique().tolist()
+            company_ids = (
+                context.security_master_raw.loc[
+                    context.security_master_raw["security_id"].astype("string").isin(security_master_frame["security_id"].astype("string")),
+                    source_company_column,
+                ]
+                .dropna()
+                .astype("string")
+                .str.upper()
+                .unique()
+                .tolist()
+            )
         else:
             company_ids = []
     else:
