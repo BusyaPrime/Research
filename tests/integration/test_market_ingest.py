@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import pandas as pd
-
 from alpha_research.common.io import read_json, read_parquet
 from alpha_research.data.ingest.market import MarketIngestionService
 from alpha_research.data.providers.base import ProviderPage
@@ -51,6 +49,10 @@ def test_market_request_manifest_created_for_batch(minimal_repo) -> None:
     manifest = service.load_manifest(artifacts.manifest_path)
     assert manifest["request_id"]
     assert manifest["row_count_raw"] == 3
+    assert manifest["dataset_id"].startswith("bronze_market_daily__v1__")
+    assert manifest["content_sha256"]
+    assert manifest["schema_sha256"]
+    assert manifest["profile_digest"]
 
 
 def test_market_repeated_ingest_is_idempotent(minimal_repo) -> None:

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import pandas as pd
-import pytest
 
 from alpha_research.common.io import read_json, read_parquet
 from alpha_research.config.models import LabelOverlapPolicy, LabelsConfig
@@ -74,6 +73,11 @@ def test_dataset_manifest_contains_row_count_and_feature_count(tmp_path) -> None
     manifest = read_json(assembled.manifest_path)
     assert manifest["row_count"] == len(assembled.panel)
     assert manifest["feature_count"] == assembled.manifest.feature_count
+    assert manifest["dataset_id"].startswith("gold__ds_v2__")
+    assert manifest["content_sha256"]
+    assert manifest["schema_sha256"]
+    assert manifest["profile_digest"]
+    assert manifest["file_sha256"]
 
 
 def test_feature_coverage_ratio_is_deterministic(tmp_path) -> None:

@@ -4,6 +4,14 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+from alpha_research.common.io import read_parquet
+from alpha_research.common.lineage import (
+    content_addressed_dataset_id,
+    file_sha256_or_none,
+    hash_dataframe_contents,
+    hash_dataframe_profile,
+    hash_dataframe_schema,
+)
 
 REQUIRED_MANIFEST_FIELDS = ("run_id", "dataset_version", "config_hash", "runtime_metadata")
 REQUIRED_REVIEW_FIELDS = (
@@ -124,13 +132,38 @@ def verify_release_bundle(root: Path, review_bundle_path: Path | None = None) ->
             f"capability_class={review_bundle['capability_class']}, runtime_class={review_bundle['runtime_class']}."
         )
 
+    dataset_manifest_path = _require_file(root, str(required_manifests["dataset_manifest"]), label="manifest:dataset_manifest")
+    dataset_manifest = _read_json(dataset_manifest_path)
+    parquet_path = Path(str(dataset_manifest["parquet_path"]))
+    if not parquet_path.is_absolute():
+        parquet_path = (root / parquet_path).resolve()
+    if not parquet_path.exists():
+        raise ReleaseVerificationError(f"Не найден parquet из dataset manifest: {parquet_path}")
+    dataset_frame = read_parquet(parquet_path)
+    if dataset_manifest.get("content_sha256") != hash_dataframe_contents(dataset_frame):
+        raise ReleaseVerificationError("Dataset manifest content_sha256 не совпадает с фактическим parquet contents.")
+    if dataset_manifest.get("schema_sha256") != hash_dataframe_schema(dataset_frame):
+        raise ReleaseVerificationError("Dataset manifest schema_sha256 не совпадает с фактическим parquet schema.")
+    if dataset_manifest.get("profile_digest") != hash_dataframe_profile(dataset_frame):
+        raise ReleaseVerificationError("Dataset manifest profile_digest не совпадает с фактическим parquet profile.")
+    if dataset_manifest.get("file_sha256") != file_sha256_or_none(parquet_path):
+        raise ReleaseVerificationError("Dataset manifest file_sha256 не совпадает с фактическим parquet file hash.")
+    expected_dataset_id = content_addressed_dataset_id(
+        layer="gold",
+        dataset_version=str(dataset_manifest["dataset_version"]),
+        content_sha256=str(dataset_manifest["content_sha256"]),
+        schema_sha256=str(dataset_manifest["schema_sha256"]),
+    )
+    if dataset_manifest.get("dataset_id") != expected_dataset_id:
+        raise ReleaseVerificationError("Dataset manifest dataset_id не совпадает с content-addressed вычислением.")
+
     notes.append(f"temporary_simplifications={len(temporary_simplifications)}")
     notes.append(f"artifacts={len(manifest_payload.get('artifacts', []))}")
     return ReleaseVerificationResult(
         ok=True,
         review_bundle_path=bundle_path,
         manifest_count=len(required_manifests),
-        report_count=sum(1 for value in required_reports.values() if value is not None),
+        report_count=len([value for value in required_reports.values() if value is not None]),
         section_count=len(section_paths),
         figure_count=figure_count,
         pending_output_count=len(pending_outputs),

@@ -9,8 +9,16 @@ from alpha_research.common.hashing import hash_mapping
 from alpha_research.common.io import read_json
 from alpha_research.data.providers.base import FundamentalsProvider
 from alpha_research.data.schemas import schema_field_names, validate_dataframe
-from alpha_research.data.storage import DatasetPaths, build_request_key, maybe_load_manifest, persist_bronze_frame, persist_manifest, persist_payload, utc_now_iso
-
+from alpha_research.data.storage import (
+    DatasetPaths,
+    bronze_lineage_descriptor,
+    build_request_key,
+    maybe_load_manifest,
+    persist_bronze_frame,
+    persist_manifest,
+    persist_payload,
+    utc_now_iso,
+)
 
 CANONICAL_METRIC_MAP = {
     "bookequity": "book_equity",
@@ -154,6 +162,7 @@ class FundamentalsIngestionService:
         duplicate_exact_mask = bronze.duplicated(["source_company_id", "metric_name_canonical", "fiscal_period_end", "available_from"], keep=False)
         bronze = validate_dataframe(bronze[schema_field_names("bronze_fundamentals", root=self.root)], "bronze_fundamentals", root=self.root)
         persist_bronze_frame(bronze_path, bronze)
+        lineage = bronze_lineage_descriptor(bronze, dataset="fundamentals", data_version=self.data_version, path=bronze_path)
 
         manifest = {
             "request_id": request_key,
@@ -170,6 +179,7 @@ class FundamentalsIngestionService:
             "bronze_path": str(bronze_path.relative_to(self.root)),
             "duplicate_fact_count": int(duplicate_exact_mask.sum()),
             "restatement_count": int(bronze["is_restatement"].sum()),
+            **lineage,
         }
         persist_manifest(manifest_path, manifest)
         return FundamentalsIngestArtifacts(request_key, manifest_path, raw_path, bronze_path, False)

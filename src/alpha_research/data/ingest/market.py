@@ -9,7 +9,16 @@ from alpha_research.common.hashing import hash_mapping
 from alpha_research.common.io import read_json
 from alpha_research.data.providers.base import MarketDataProvider
 from alpha_research.data.schemas import schema_field_names, validate_dataframe
-from alpha_research.data.storage import DatasetPaths, build_request_key, maybe_load_manifest, persist_bronze_frame, persist_manifest, persist_payload, utc_now_iso
+from alpha_research.data.storage import (
+    DatasetPaths,
+    bronze_lineage_descriptor,
+    build_request_key,
+    maybe_load_manifest,
+    persist_bronze_frame,
+    persist_manifest,
+    persist_payload,
+    utc_now_iso,
+)
 from alpha_research.reference.security_master import SymbolMapper
 
 
@@ -74,6 +83,7 @@ class MarketIngestionService:
         bronze["data_version"] = self.data_version
         bronze = validate_dataframe(bronze[schema_field_names("bronze_market_daily", root=self.root)], "bronze_market_daily", root=self.root)
         persist_bronze_frame(bronze_path, bronze)
+        lineage = bronze_lineage_descriptor(bronze, dataset="market_daily", data_version=self.data_version, path=bronze_path)
 
         manifest = {
             "request_id": request_key,
@@ -89,6 +99,7 @@ class MarketIngestionService:
             "row_count_bronze": int(len(bronze)),
             "bronze_path": str(bronze_path.relative_to(self.root)),
             "missing_symbols": sorted(set(provider_missing) | set(mapping.missing_symbols)),
+            **lineage,
         }
         persist_manifest(manifest_path, manifest)
         return MarketIngestArtifacts(request_key=request_key, manifest_path=manifest_path, raw_payload_path=raw_path, bronze_path=bronze_path, idempotent_hit=False)

@@ -5,8 +5,11 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pandas as pd
 import pytest
 
+from alpha_research.common.io import write_parquet
+from alpha_research.dataset.assembly import build_dataset_manifest
 from alpha_research.release.verification import ReleaseVerificationError, verify_release_bundle
 
 
@@ -34,7 +37,23 @@ def _build_release_fixture(root: Path) -> Path:
     (sections_dir / "01_executive_summary.md").write_text("## summary\n", encoding="utf-8")
     (figures_dir / "equity_curve.svg").write_text("<svg></svg>\n", encoding="utf-8")
 
-    dataset_manifest = _write_json(manifests_dir / "dataset_manifest.json", {"status": "ok"})
+    gold_parquet = run_root / "datasets" / "gold_panel.parquet"
+    gold_frame = pd.DataFrame(
+        [
+            {"date": "2024-01-02", "security_id": "SEC_001", "label_excess_5d_oo": 0.01, "ret_21": 0.10},
+            {"date": "2024-01-03", "security_id": "SEC_002", "label_excess_5d_oo": 0.02, "ret_21": 0.20},
+        ]
+    )
+    write_parquet(gold_frame, gold_parquet)
+    dataset_manifest_payload = build_dataset_manifest(
+        gold_frame,
+        dataset_version="gold_latest",
+        primary_label="label_excess_5d_oo",
+        parquet_path=gold_parquet,
+        feature_columns=["ret_21"],
+    ).__dict__
+
+    dataset_manifest = _write_json(manifests_dir / "dataset_manifest.json", dataset_manifest_payload)
     oof_manifest = _write_json(manifests_dir / "oof_manifest.json", {"status": "ok"})
     evaluation_manifest = _write_json(manifests_dir / "evaluation_manifest.json", {"status": "ok"})
     skepticism_manifest = _write_json(manifests_dir / "skepticism_manifest.json", {"status": "ok"})

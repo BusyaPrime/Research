@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -9,11 +9,18 @@ import pandas as pd
 
 from alpha_research.common.hashing import hash_mapping
 from alpha_research.common.io import read_json, write_json, write_parquet
+from alpha_research.common.lineage import (
+    content_addressed_dataset_id,
+    file_sha256_or_none,
+    hash_dataframe_contents,
+    hash_dataframe_profile,
+    hash_dataframe_schema,
+)
 from alpha_research.common.paths import RepositoryPaths
 
 
 def utc_now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def build_request_key(provider_name: str, endpoint_name: str, identifiers: list[str], start_date: str, end_date: str) -> str:
@@ -32,7 +39,7 @@ class DatasetPaths:
     root: Path
 
     @classmethod
-    def from_root(cls, root: Path | None = None) -> "DatasetPaths":
+    def from_root(cls, root: Path | None = None) -> DatasetPaths:
         return cls(root=RepositoryPaths.from_root(root).root)
 
     def raw_payload_path(self, dataset: str, request_key: str) -> Path:
@@ -62,3 +69,25 @@ def persist_manifest(path: Path, manifest: dict[str, Any]) -> Path:
 
 def persist_bronze_frame(path: Path, frame: pd.DataFrame) -> Path:
     return write_parquet(frame, path)
+
+
+def payload_digest(payload: Any) -> str:
+    return hash_mapping(payload)
+
+
+def bronze_lineage_descriptor(frame: pd.DataFrame, *, dataset: str, data_version: str, path: Path) -> dict[str, Any]:
+    content_sha256 = hash_dataframe_contents(frame)
+    schema_sha256 = hash_dataframe_schema(frame)
+    profile_digest = hash_dataframe_profile(frame)
+    return {
+        "dataset_id": content_addressed_dataset_id(
+            layer=f"bronze_{dataset}",
+            dataset_version=data_version,
+            content_sha256=content_sha256,
+            schema_sha256=schema_sha256,
+        ),
+        "content_sha256": content_sha256,
+        "schema_sha256": schema_sha256,
+        "profile_digest": profile_digest,
+        "file_sha256": file_sha256_or_none(path),
+    }

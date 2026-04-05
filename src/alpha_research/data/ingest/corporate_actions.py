@@ -9,9 +9,17 @@ from alpha_research.common.hashing import hash_mapping
 from alpha_research.common.io import read_json
 from alpha_research.data.providers.base import CorporateActionsProvider
 from alpha_research.data.schemas import schema_field_names, validate_dataframe
-from alpha_research.data.storage import DatasetPaths, build_request_key, maybe_load_manifest, persist_bronze_frame, persist_manifest, persist_payload, utc_now_iso
+from alpha_research.data.storage import (
+    DatasetPaths,
+    bronze_lineage_descriptor,
+    build_request_key,
+    maybe_load_manifest,
+    persist_bronze_frame,
+    persist_manifest,
+    persist_payload,
+    utc_now_iso,
+)
 from alpha_research.reference.security_master import SymbolMapper
-
 
 VALID_EVENT_TYPES = {"split", "dividend", "delisting", "symbol_change"}
 
@@ -88,6 +96,7 @@ class CorporateActionsIngestionService:
             persist_bronze_frame(bronze_path, valid)
         else:
             valid = validate_dataframe(pd.DataFrame(columns=schema_field_names("bronze_corporate_actions", root=self.root)), "bronze_corporate_actions", root=self.root)
+        lineage = bronze_lineage_descriptor(valid, dataset="corporate_actions", data_version=self.data_version, path=bronze_path)
 
         manifest = {
             "request_id": request_key,
@@ -104,6 +113,7 @@ class CorporateActionsIngestionService:
             "row_count_failed": int(len(failed)),
             "bronze_path": str(bronze_path.relative_to(self.root)),
             "failed_extract_path": str(failed_path.relative_to(self.root)) if not failed.empty else None,
+            **lineage,
         }
         persist_manifest(manifest_path, manifest)
         return CorporateActionsIngestArtifacts(request_key, manifest_path, raw_path, bronze_path, failed_path, False)

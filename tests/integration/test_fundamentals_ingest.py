@@ -103,6 +103,9 @@ def test_fundamentals_duplicate_facts_logged(minimal_repo) -> None:
     artifacts = service.ingest(_build_provider(), ["COMP_AAPL"], "2024-01-01", "2024-06-01")
     manifest = service.load_manifest(artifacts.manifest_path)
     assert manifest["duplicate_fact_count"] == 2
+    assert manifest["dataset_id"].startswith("bronze_fundamentals__v1__")
+    assert manifest["content_sha256"]
+    assert manifest["schema_sha256"]
 
 
 def test_fundamentals_metric_names_map_deterministically(minimal_repo) -> None:

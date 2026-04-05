@@ -3,8 +3,8 @@ from __future__ import annotations
 from alpha_research.common.io import read_parquet
 from alpha_research.data.ingest.corporate_actions import CorporateActionsIngestionService
 from alpha_research.data.providers.base import ProviderPage
-from tests.helpers.fakes import PagedCorporateActionsProvider, sample_security_master
 from alpha_research.reference.security_master import SymbolMapper
+from tests.helpers.fakes import PagedCorporateActionsProvider, sample_security_master
 
 
 def _build_provider() -> PagedCorporateActionsProvider:
@@ -72,6 +72,8 @@ def test_corporate_actions_manifest_contains_row_counts(minimal_repo) -> None:
     manifest = service.load_manifest(artifacts.manifest_path)
     assert manifest["row_count_raw"] == 5
     assert manifest["row_count_valid"] == 4
+    assert manifest["dataset_id"].startswith("bronze_corporate_actions__v1__")
+    assert manifest["file_sha256"]
 
 
 def test_corporate_actions_invalid_rows_written_to_failed_extract(minimal_repo) -> None:
