@@ -7,13 +7,16 @@ import pandas as pd
 
 from alpha_research.config.models import CostsConfig
 
-
 SCENARIO_MULTIPLIERS = {
     "optimistic": 0.75,
     "base": 1.0,
     "stressed": 1.5,
     "severely_stressed": 2.0,
 }
+
+
+class CostModelMetadataError(RuntimeError):
+    pass
 
 
 def _scenario_multiplier(scenario: str) -> float:
@@ -28,12 +31,24 @@ def calculate_spread_half_bps(price: float, liquidity_bucket: str, costs_config:
     price_value = float(price)
     bucket_value = str(liquidity_bucket)
     matched = []
+    price_range_candidates = []
     for bucket in costs_config.spread_proxy.buckets:
+        in_price_range = bucket.price_min <= price_value < bucket.price_max
+        if in_price_range:
+            price_range_candidates.append(bucket.half_spread_bps)
         if bucket.price_min <= price_value < bucket.price_max and bucket.adv_bucket == bucket_value:
             matched.append(bucket.half_spread_bps)
     if matched:
         return float(matched[0]) * _scenario_multiplier(scenario)
-    fallback = min(bucket.half_spread_bps for bucket in costs_config.spread_proxy.buckets)
+
+    if price_range_candidates:
+        fallback = max(price_range_candidates)
+        return float(fallback) * _scenario_multiplier(scenario)
+
+    all_buckets = [bucket.half_spread_bps for bucket in costs_config.spread_proxy.buckets]
+    if not all_buckets:
+        raise CostModelMetadataError("В spread proxy не описано ни одного bucket, стоимость исполнения посчитать нельзя.")
+    fallback = max(all_buckets)
     return float(fallback) * _scenario_multiplier(scenario)
 
 
@@ -46,9 +61,12 @@ def _borrow_bps_daily(borrow_status: str, costs_config: CostsConfig, *, scenario
     elif status == "high":
         value = costs_config.borrow.high_borrow_bps_daily
     elif status == "unborrowable":
-        value = 0.0 if costs_config.borrow.hard_to_borrow_policy == "ban_or_extreme_stress" else costs_config.borrow.high_borrow_bps_daily * 5.0
+        if costs_config.borrow.hard_to_borrow_policy == "ban_or_extreme_stress":
+            value = costs_config.borrow.high_borrow_bps_daily * 10.0
+        else:
+            value = costs_config.borrow.high_borrow_bps_daily * 5.0
     else:
-        value = costs_config.borrow.medium_borrow_bps_daily
+        value = costs_config.borrow.high_borrow_bps_daily
     return float(value) * _scenario_multiplier(scenario)
 
 
@@ -57,7 +75,7 @@ def calculate_borrow_cost(holdings: pd.DataFrame, aum: float, costs_config: Cost
         return 0.0
     frame = holdings.copy()
     frame["weight"] = pd.to_numeric(frame["weight"], errors="coerce").fillna(0.0)
-    frame["borrow_status"] = frame.get("borrow_status", pd.Series("medium", index=frame.index)).fillna("medium")
+    frame["borrow_status"] = frame.get("borrow_status", pd.Series("high", index=frame.index)).fillna("high")
     shorts = frame.loc[frame["weight"] < 0].copy()
     if shorts.empty:
         return 0.0
@@ -88,7 +106,7 @@ def compute_trade_costs(executed_trades: pd.DataFrame, costs_config: CostsConfig
     frame["executed_notional"] = pd.to_numeric(frame["executed_notional"], errors="coerce").fillna(0.0)
     frame["adv20_usd_t"] = pd.to_numeric(frame["adv20_usd_t"], errors="coerce").replace(0.0, np.nan)
     frame["open"] = pd.to_numeric(frame["open"], errors="coerce").fillna(0.0)
-    frame["liquidity_bucket"] = frame.get("liquidity_bucket", pd.Series("medium", index=frame.index)).fillna("medium")
+    frame["liquidity_bucket"] = frame.get("liquidity_bucket", pd.Series("unknown", index=frame.index)).fillna("unknown")
     participation = (frame["executed_notional"].abs() / frame["adv20_usd_t"]).fillna(0.0)
 
     frame["commission_cost"] = frame["executed_notional"].abs().map(lambda value: calculate_commission_cost(float(value), costs_config, scenario=scenario))

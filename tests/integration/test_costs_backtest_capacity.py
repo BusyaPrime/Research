@@ -19,11 +19,26 @@ def test_spread_proxy_uses_bucket_policy() -> None:
     assert half_spread == pytest.approx(3.0)
 
 
+def test_spread_proxy_uses_conservative_fallback_for_unknown_bucket() -> None:
+    half_spread = calculate_spread_half_bps(30.0, "unknown", make_costs_config())
+    assert half_spread == pytest.approx(3.0)
+
+
 def test_borrow_model_charges_only_on_shorts() -> None:
     holdings = pd.DataFrame(
         [
             {"security_id": "SEC_LONG", "weight": 0.10, "borrow_status": "high"},
             {"security_id": "SEC_SHORT", "weight": -0.10, "borrow_status": "high"},
+        ]
+    )
+    cost = calculate_borrow_cost(holdings, 1_000_000.0, make_costs_config())
+    assert cost == pytest.approx(200.0)
+
+
+def test_borrow_model_defaults_unknown_regime_to_conservative_high_cost() -> None:
+    holdings = pd.DataFrame(
+        [
+            {"security_id": "SEC_SHORT", "weight": -0.10, "borrow_status": "mystery"},
         ]
     )
     cost = calculate_borrow_cost(holdings, 1_000_000.0, make_costs_config())
