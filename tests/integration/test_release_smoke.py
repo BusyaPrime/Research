@@ -60,6 +60,7 @@ def test_release_smoke_runs_operational_path_and_writes_summary(minimal_repo, mo
     assert result.summary_path.exists()
     assert result.verification.ok is True
     assert result.ingest_commands_run == (
+        "build-reference",
         "ingest-market",
         "ingest-fundamentals",
         "ingest-corporate-actions",
@@ -70,3 +71,20 @@ def test_release_smoke_runs_operational_path_and_writes_summary(minimal_repo, mo
     assert payload["verification"]["ok"] is True
     assert payload["verification"]["figure_count"] >= 1
     assert payload["operational_run"]["dataset_version"] == "gold_latest"
+
+
+def test_release_smoke_runs_real_configured_local_fixture_path(minimal_repo) -> None:
+    result = run_release_smoke(minimal_repo)
+    assert result.summary_path.exists()
+    assert result.verification.ok is True
+    assert result.ingest_commands_run == (
+        "build-reference",
+        "ingest-market",
+        "ingest-fundamentals",
+        "ingest-corporate-actions",
+    )
+
+    payload = json.loads(result.summary_path.read_text(encoding="utf-8"))
+    assert payload["prepared_fixture_dir"]
+    assert payload["verification"]["pending_output_count"] == 0
+    assert payload["verification"]["figure_count"] >= 1

@@ -14,6 +14,8 @@ release_smoke:
   max_model_trials: 2
   cost_scenarios:
     - base
+  provider_mode_override: configured_adapters
+  prepare_local_configured_fixtures: true
   universe:
     eligible_security_types:
       - common_stock

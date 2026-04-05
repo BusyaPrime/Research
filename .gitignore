@@ -12,11 +12,14 @@ build/
 dist/
 artifacts/bootstrap/
 artifacts/runs/
+artifacts/release_smoke/
+artifacts/release_smoke_fixtures/
 logs/*.jsonl
 data/raw/*
 data/bronze/*
 data/silver/*
 data/gold/*
+data/reference/*
 reports/generated/*
 reports/*
 !reports/.gitkeep

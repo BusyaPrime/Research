@@ -59,6 +59,7 @@ def minimal_repo(tmp_path: Path, repo_root: Path) -> Path:
 
     _copy_tree(repo_root / "configs", target / "configs")
     _copy_tree(repo_root / "schemas", target / "schemas")
+    _copy_file(repo_root / "docs" / "release_checklist.md", target / "docs" / "release_checklist.md")
 
     for relative in ("data", "artifacts", "logs", "reports"):
         (target / relative).mkdir(parents=True, exist_ok=True)

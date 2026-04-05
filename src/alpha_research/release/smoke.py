@@ -8,9 +8,10 @@ import warnings
 from alpha_research.common.manifests import write_json_document
 from alpha_research.common.paths import RepositoryPaths
 from alpha_research.config.loader import LoadedConfigBundle, load_resolved_config_bundle
-from alpha_research.pipeline.fixture_data import build_synthetic_research_bundle
+from alpha_research.common.hashing import hash_mapping
 from alpha_research.pipeline.runtime import execute_operational_command
 from alpha_research.pipeline.stages import run_stage_command
+from alpha_research.release.local_fixtures import prepare_local_configured_smoke_bundle
 from alpha_research.release.verification import ReleaseVerificationResult, verify_release_bundle
 from alpha_research.tracking.runtime import capture_runtime_metadata
 
@@ -41,8 +42,13 @@ def _build_smoke_loaded(loaded: LoadedConfigBundle) -> LoadedConfigBundle:
         }
     )
     smoke_experiment = experiment.model_copy(update={"model": updated_model})
-    smoke_bundle = loaded.bundle.model_copy(update={"experiments": {smoke.experiment_key: smoke_experiment}})
-    return replace(loaded, bundle=smoke_bundle)
+    runtime_bundle = loaded.bundle.runtime
+    if smoke.provider_mode_override is not None:
+        runtime_bundle = runtime_bundle.model_copy(
+            update={"ingest": runtime_bundle.ingest.model_copy(update={"provider_mode": smoke.provider_mode_override})}
+        )
+    smoke_bundle = loaded.bundle.model_copy(update={"experiments": {smoke.experiment_key: smoke_experiment}, "runtime": runtime_bundle})
+    return replace(loaded, bundle=smoke_bundle, config_hash=hash_mapping(smoke_bundle.model_dump(mode="json")))
 
 
 def run_release_smoke(root: Path | None = None, *, extra_policy: str = "forbid") -> ReleaseSmokeResult:
@@ -53,17 +59,30 @@ def run_release_smoke(root: Path | None = None, *, extra_policy: str = "forbid")
         raise RuntimeError("Release smoke profile отключен в configs/runtime.yaml.")
 
     smoke_loaded = _build_smoke_loaded(loaded)
-    synthetic_bundle = build_synthetic_research_bundle(
-        start_date=smoke.start_date,
-        end_date=smoke.end_date,
-        n_securities=smoke.n_securities,
-        seed=loaded.bundle.project.default_random_seed,
-    )
+    synthetic_bundle = None
+    prepared_fixture_dir: Path | None = None
+    if smoke.prepare_local_configured_fixtures:
+        smoke_loaded, prepared_fixture_dir = prepare_local_configured_smoke_bundle(
+            paths.root,
+            smoke_loaded,
+            start_date=smoke.start_date,
+            end_date=smoke.end_date,
+            n_securities=smoke.n_securities,
+        )
+    elif smoke_loaded.bundle.runtime.ingest.provider_mode == "synthetic_vendor_stub":
+        from alpha_research.pipeline.fixture_data import build_synthetic_research_bundle
+
+        synthetic_bundle = build_synthetic_research_bundle(
+            start_date=smoke.start_date,
+            end_date=smoke.end_date,
+            n_securities=smoke.n_securities,
+            seed=loaded.bundle.project.default_random_seed,
+        )
 
     ingest_results: list[dict[str, object]] = []
     ingest_commands_run: list[str] = []
     if smoke.run_ingest_commands:
-        for command_name in ("ingest-market", "ingest-fundamentals", "ingest-corporate-actions"):
+        for command_name in ("build-reference", "ingest-market", "ingest-fundamentals", "ingest-corporate-actions"):
             payload = run_stage_command(command_name, paths.root, smoke_loaded)
             ingest_results.append(payload)
             ingest_commands_run.append(command_name)
@@ -79,6 +98,9 @@ def run_release_smoke(root: Path | None = None, *, extra_policy: str = "forbid")
             capacity_config=smoke.capacity,
             universe_config=smoke.universe,
             cost_scenarios=smoke.cost_scenarios,
+            bundle_start_date=smoke.start_date,
+            bundle_end_date=smoke.end_date,
+            bundle_n_securities=smoke.n_securities,
         )
         verification = verify_release_bundle(paths.root, operational.review_bundle_path)
 
@@ -93,6 +115,7 @@ def run_release_smoke(root: Path | None = None, *, extra_policy: str = "forbid")
             "profile": smoke.model_dump(mode="json"),
             "config_hash": smoke_loaded.config_hash,
             "runtime_metadata": capture_runtime_metadata(paths.root).model_dump(mode="json"),
+            "prepared_fixture_dir": None if prepared_fixture_dir is None else str(prepared_fixture_dir.relative_to(paths.root)),
             "ingest_commands_run": ingest_commands_run,
             "ingest_results": ingest_results,
             "operational_run": {
