@@ -35,7 +35,12 @@
 
 ### Operational ingest path
 
-Ingest-команды уже operational и сохраняют raw payload, request manifests, bronze artifacts и reference layer как нормальный stage path. Но источник пока synthetic vendor stub. То есть контракт слоя уже честный, а вот доказательства работы против живого внешнего провайдера, rate limits, schema drift и secrets flow еще нет.
+Этот хвост уже не в том месте, где раньше. Теперь есть два честных operational режима:
+
+- deterministic synthetic mode для offline/smoke-прогонов;
+- configured adapters path для reference, ingest и downstream runtime.
+
+То есть `run-report` и `run-full-pipeline` теперь умеют собирать research bundle не только из синтетики, но и через configured adapters с реальными внешними вызовами и локальными источниками. Плюс появился clean-room smoke path на local-file adapters без monkeypatch'ей и без сети. Не закрыта уже не сама архитектурная возможность, а последняя продовая миля: secrets flow, rate limits, schema drift и прогон на живом внешнем контуре.
 
 ### Model zoo
 
@@ -77,7 +82,7 @@ Baseline, linear path и boosting-модели уже едут в operational ru
 
 ### Portfolio/backtest
 
-Почти закрыто. Основной путь честный, но optimizer ещё упрощён.
+Закрыто. Основной путь честный, optimizer уже constrained, costs/turnover/gross-net/accounting на месте.
 
 ### Capacity/robustness/regimes/decay
 
@@ -85,10 +90,10 @@ Baseline, linear path и boosting-модели уже едут в operational ru
 
 ### Reporting & hardening
 
-Почти закрыто. Артефакты, section bundle, review bundle и figures уже на месте. Не закончена именно последняя миля reproducibility и vendor-operational readiness.
+Закрыто по внутреннему reproducible path. Артефакты, section bundle, review bundle, figures и configured clean-room smoke уже на месте. Открытым остается не release bundle как таковой, а live vendor operational readiness.
 
 ## Вывод
 
-По текущей оценке проект находится примерно в зоне `96%` от полного целевого состояния по `MASTER_SPEC.md`.
+По текущей оценке проект находится примерно в зоне `99%` от полного целевого состояния по `MASTER_SPEC.md`.
 
-Это уже рабочая исследовательская платформа с честным сквозным контуром, operational ingest surface, release verifier, config-driven release smoke profile и нормальным report/review bundle, но еще не тот момент, когда можно без оговорок сказать “все требования spec добиты до конца”. До полного закрытия ТЗ осталось меньше, чем уже сделано, но оставшийся кусок по-прежнему сидит в самых капризных слоях: real vendor adapters, secrets/runtime operations и final clean-room hardening на живом внешнем path.
+Это уже рабочая исследовательская платформа с честным сквозным контуром, configured operational data path, dedicated benchmark adapter path, release verifier, config-driven release smoke profile и нормальным report/review bundle, но еще не тот момент, когда можно без оговорок сказать “все требования spec добиты до конца”. До полного закрытия ТЗ остался один по-настоящему капризный хвост: live vendor operations на реальном внешнем контуре.

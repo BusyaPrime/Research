@@ -2,17 +2,23 @@
 
 ## Риски, которые сейчас еще остаются
 
-### Real vendor path пока заменен synthetic vendor stub
+### Live adapter path уже есть, но боевая эксплуатация еще не выгуляна как следует
 
-Это уже не stub на уровне CLI или artifact path: ingest-команды живые и сохраняют все нужные слои. Но источник пока синтетический, поэтому до проверки на реальном вендоре остаются rate limits, schema drift, секреты и операционный шум, который обычно и приходит без приглашения.
+Configured adapters path теперь реально собирает reference, ingest и downstream runtime не только из синтетики, но и из внешних источников. Хвост сместился в более знакомое место: secrets flow, rate limits, schema drift, vendor-side нестабильность и прочий продовый быт, который всегда появляется в самый неподходящий момент.
+
+Synthetic mode тоже остается, но уже как честный offline/smoke fallback, а не как единственный operational режим.
 
 ### Release-hardening еще не добит до состояния “бери и переноси”
 
-Figures уже рендерятся отдельными SVG-файлами, report bundle и section bundle сохраняются, manifests тоже на месте. Но clean-room прогон на совсем чистом окружении и финальная упаковка reproducible handoff еще требуют добивки.
+Figures уже рендерятся отдельными SVG-файлами, report bundle и section bundle сохраняются, manifests тоже на месте. Clean-room smoke для configured local fixtures уже закрыт. Оставшийся хвост тут уже не в bundle-слое, а в том, чтобы тот же путь спокойно переживал реальный внешний контур.
 
 ### Model zoo еще можно расширять
 
 Boosting path уже подключен, baseline и linear слой тоже едут честно. Оставшийся риск тут не в отсутствии advanced path, а в том, что zoo пока уже рабочий, но еще не такой широкий, как просится для долгой исследовательской жизни.
+
+### Proxy benchmark все еще существует как fallback
+
+Dedicated benchmark adapter path уже есть, но proxy по market panel мы специально не убирали. Это полезный fallback для локального и smoke-режима, но в боевой конфигурации нужно явно понимать, какой источник benchmark выбран и почему.
 
 ## Ограничения среды
 

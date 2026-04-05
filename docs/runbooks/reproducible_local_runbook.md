@@ -25,7 +25,7 @@
 python .\scripts\run_release_smoke.py --root .
 ```
 
-Этот путь использует отдельный config-driven smoke profile из `configs/runtime.yaml`. Он специально компактнее полного research-прогона, чтобы быстро проверить operational stitching: ingest, report bundle, figures, review bundle и verifier.
+Этот путь использует отдельный config-driven smoke profile из `configs/runtime.yaml`. По умолчанию он поднимает configured local fixtures, чтобы прогнать `build-reference -> ingest -> run-report -> verifier` без сети, без ручных правок и без магии уровня “тут просто поверь”.
 
 ### 1. Поднять окружение
 
@@ -46,12 +46,18 @@ python -m alpha_research config-validate
 ### 3. Прогнать operational ingest surface
 
 ```powershell
+python -m alpha_research build-reference
 python -m alpha_research ingest-market
 python -m alpha_research ingest-fundamentals
 python -m alpha_research ingest-corporate-actions
 ```
 
-Сейчас эти команды работают через `synthetic vendor stub`. Это честное временное решение: stage path настоящий, но внешнего вендора тут пока нет.
+Здесь есть два основных режима:
+
+- `synthetic_vendor_stub` для offline/smoke-прогона;
+- `configured_adapters` для прогона через внешние источники и локальные reference/corporate-actions файлы.
+
+Если включен `configured_adapters`, сначала проверь локальные пути и env-переменные под adapters. Для release smoke есть отдельный локальный fixture path, который готовится автоматически и позволяет проверить configured runtime без внешней сети. Если включен synthetic mode, это не обманка, а детерминированный fallback для воспроизводимых offline-прогонов.
 
 ### 4. Собрать report path
 
@@ -90,8 +96,8 @@ python .\scripts\verify_release_bundle.py --root .
 
 ## Где здесь еще честный хвост
 
-- внешний vendor path все еще не подключен;
-- clean-room прогон на совсем пустой машине еще требует отдельной добивки;
+- live adapter path уже есть, но его еще нужно прогонять на живом внешнем контуре без тестовых подмен;
+- clean-room smoke для local configured fixtures уже закрыт, но это не подменяет live vendor verification;
 - secrets/runtime ops слой пока не проверен в боевой манере.
 
 То есть runbook уже полезный и рабочий, но это еще не повод делать вид, что operational зрелость закрыта окончательно.
