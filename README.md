@@ -33,7 +33,9 @@
 - statistical skepticism: bootstrap uncertainty, probabilistic/deflated Sharpe, FDR-контроль, stability gates и machine-readable approval summary;
 - portfolio/backtest: target weights, turnover, execution simulation, costs, holdings state, gross/net accounting;
 - robustness/evaluation: capacity ladder, predictive metrics, regime breakdown, decay, ablation-матрицы, markdown/html report generation, persisted section bundle, figure artifacts и review bundle;
-- hardening: leakage guards, operational stage wiring, CI smoke-проверки, release checklist.
+- content-addressed lineage: dataset manifests фиксируют content/schema/profile/file hash и дают immutable dataset id вместо “просто latest parquet где-то на диске”;
+- pipeline orchestration: тонкий dispatcher и отдельные runtime-модули для ingest, research, reporting, release и verification;
+- hardening: leakage guards, operational stage wiring, `ruff`, `mypy`, configured-local smoke, release verifier, acceptance/spec coverage audit и nightly live-public smoke.
 - live verification: configured local smoke без сети и отдельный live-public smoke через публичные источники.
 
 ## Как устроен проект
@@ -50,7 +52,7 @@
 - `src/alpha_research/splits`, `models`, `training` — walk-forward, baseline models, OOF.
 - `src/alpha_research/portfolio`, `execution`, `backtest`, `capacity` — портфельная и торговая часть.
 - `src/alpha_research/evaluation` — метрики и финальные отчеты.
-- `src/alpha_research/pipeline` — orchestration stage-by-stage.
+- `src/alpha_research/pipeline` — orchestration stage-by-stage, stage graph и разнесенные runtime handlers.
 - `tests` — unit, integration, leakage и acceptance-покрытие.
 - `docs/status/spec_coverage_map.yaml` — machine-readable карта, которая связывает ключевые инварианты spec с кодом, тестами и артефактами.
 
@@ -89,9 +91,12 @@ python .\scripts\run_release_smoke.py --root . --mode live-public
 ## Как проверять
 
 - `python -m pytest` — базовый прогон тестов;
+- `python -m ruff check src tests` — lint gate;
+- `python -m mypy src/alpha_research` — type gate;
 - `tests/leakage` — проверки на протечки;
 - `tests/integration` — сквозные куски пайплайна;
 - `tests/acceptance/acceptance_tests.yaml` — quality gates из спецификации.
+- `docs/status/acceptance_coverage_map.yaml` — machine-readable связка acceptance suite с реальными тестами.
 - `docs/status/spec_coverage_map.yaml` — быстрый способ проверить, где clause реально enforce'ится кодом, а не просто красиво описан.
 - `python .\scripts\verify_release_bundle.py --root .` — машинная проверка release bundle и связанных артефактов.
 - `python .\scripts\run_release_smoke.py --root .` — компактный operational smoke path с ingest, report и verifier.
@@ -108,6 +113,6 @@ python .\scripts\run_release_smoke.py --root . --mode live-public
 
 Это не набор взаимозаменяемых костылей. У каждого режима свой capability contract: можно ли строить release bundle, требуется ли external proof и допустим ли synthetic ingest.
 
-Для локального воспроизводимого прогона есть отдельный runbook: [reproducible_local_runbook.md](/E:/projecttype/docs/runbooks/reproducible_local_runbook.md).
-Для отдельного тяжелого smoke-прогона есть workflow [release_smoke.yml](/E:/projecttype/.github/workflows/release_smoke.yml).
-Для честной сверки реализации со спецификацией есть [spec_coverage_map.yaml](/E:/projecttype/docs/status/spec_coverage_map.yaml) и [spec_gap_audit.md](/E:/projecttype/docs/status/spec_gap_audit.md).
+Для локального воспроизводимого прогона есть отдельный runbook: `docs/runbooks/reproducible_local_runbook.md`.
+Для отдельного тяжелого smoke-прогона есть workflow `.github/workflows/release_smoke.yml`.
+Для честной сверки реализации со спецификацией есть `docs/status/spec_coverage_map.yaml` и `docs/status/spec_gap_audit.md`.

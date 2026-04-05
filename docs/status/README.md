@@ -17,7 +17,7 @@
 - перед новой фазой смотреть `spec_gap_audit.md`, чтобы не делать вид, что хвостов нет;
 - перед релизным прогоном смотреть `implementation_status.yaml`, чтобы быстро увидеть открытые риски и временные упрощения;
 - перед жестким review смотреть `spec_coverage_map.yaml`, чтобы быстро понять, где инвариант реально enforced кодом, а где пока только описан словами;
-- перед обновлением roadmap синхронизировать этот каталог с [implementation_notes.md](/E:/projecttype/docs/implementation_notes.md) и [release_checklist.md](/E:/projecttype/docs/release_checklist.md).
+- перед обновлением roadmap синхронизировать этот каталог с `docs/implementation_notes.md` и `docs/release_checklist.md`.
 
 ## Что здесь принципиально важно
 

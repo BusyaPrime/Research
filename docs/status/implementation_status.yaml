@@ -1,4 +1,4 @@
-snapshot_date: "2026-04-05"
+snapshot_date: "2026-04-06"
 source_of_truth:
   primary: "docs/specs/MASTER_SPEC.md"
   secondary: "docs/specs/machine_spec.yaml"
@@ -17,7 +17,7 @@ overall_status:
   approval_summary_present: true
   metamorphic_invariants_present: true
 ten_out_of_ten_status:
-  completion_percent_estimate: 94
+  completion_percent_estimate: 96
   fully_closed: false
   strongest_newly_closed_blocks:
     - strict_operational_policy
@@ -27,12 +27,17 @@ ten_out_of_ten_status:
     - tiered_model_registry_and_stability_reports
     - randomized_split_invariants
     - spec_coverage_map
+    - stage_graph_and_runtime_handlers
+    - configured_provider_transport_split
+    - content_addressed_dataset_lineage
+    - strict_ci_release_gates
+    - conservative_cost_fail_closed_defaults
   remaining_blocks:
-    - deeper_stage_runtime_decomposition
+    - finer_grained_research_handler_decomposition
     - richer_property_and_mutation_testing
     - more_adversarial_execution_and_capacity_stress
     - broader_external_model_backends_beyond_internal_reference_stack
-    - content_addressed_dataset_lineage_and_replay_hashing
+    - full_immutable_replay_provenance_across_all_layers
 phase_status:
   analyze_and_map: completed
   foundation: completed
@@ -101,11 +106,11 @@ acceptance_coverage:
 temporary_simplifications: []
 open_gaps: []
 ten_out_of_ten_open_gaps:
-  - runtime orchestration все еще слишком тяжелый в одном центре и просится на более явный stage graph.
+  - orchestration brain уже вынесен из `pipeline/runtime.py`, но `runtime_research.py` еще можно резать дальше на более мелкие research handlers.
   - Property-style randomized coverage уже есть, но mutation testing и более широкий генеративный слой еще не дожаты.
   - Execution/capacity слой честный, но его можно сделать еще злее по halted/no-open/liquidity-cliff сценариям.
   - Model layer уже сильнее baseline, но не дотягивается до максимально взрослого external GBDT/ranking zoo.
-  - Provenance хороший, но не полностью content-addressed на уровне immutable dataset replay.
+  - Gold lineage уже content-addressed и verifier его перепроверяет по contents/schema/profile/file hash, но end-to-end immutable replay по всем слоям еще можно сделать жестче.
 risk_level:
   time_semantics: low
   point_in_time_correctness: low

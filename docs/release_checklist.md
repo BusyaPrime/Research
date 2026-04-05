@@ -59,6 +59,12 @@ python .\scripts\run_release_smoke.py --root .
 - unit tests зеленые;
 - integration tests зеленые;
 - leakage tests зеленые;
+- `ruff` зеленый;
+- `mypy` зеленый;
+- acceptance coverage audit зеленый;
+- spec coverage consistency зеленый;
+- configured-local smoke зеленый;
+- release verifier зеленый;
 - CI падает при любом test failure;
 - артефакты воспроизводятся из config snapshot и `git commit`;
 - backtest собран только из OOF predictions;

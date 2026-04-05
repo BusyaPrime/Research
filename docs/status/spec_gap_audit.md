@@ -32,7 +32,9 @@
 - config hash и snapshot сохраняются;
 - git metadata и runtime fingerprint пишутся;
 - manifests и review bundle уже есть;
-- report bundle тоже появился и сохраняет секции отдельно.
+- report bundle тоже появился и сохраняет секции отдельно;
+- gold dataset manifest теперь content-addressed: хранит `dataset_id`, `content_sha256`, `schema_sha256`, `profile_digest` и `file_sha256`;
+- release verifier сверяет manifest не только по именам файлов, а по фактическому parquet contents/schema/profile/file hash.
 
 ## Что было последним хвостом и чем его закрыли
 
@@ -56,6 +58,30 @@
 - requested report formats обязаны реально существовать, иначе release-capable run не считается завершенным;
 - synthetic path маркируется как `fixture_only` и не проходит release verifier;
 - review bundle с `pending_outputs`, `temporary_simplifications` или `release_eligible = false` verifier отклоняет.
+
+### Stage graph и runtime handlers
+
+Этот хвост тоже уже не открыт в прежнем виде.
+
+Что теперь есть:
+
+- `pipeline/runtime.py` стал тонким dispatcher-слоем, а не orchestration brain на пол-экрана;
+- stage graph живет отдельно и явно описывает `required_inputs`, `produced_artifacts`, `failure_semantics` и `eligibility_contract`;
+- operational path разнесен на `runtime_ingest.py`, `runtime_research.py`, `runtime_reporting.py`, `runtime_release.py`, `runtime_verification.py`;
+- stage contracts сохраняются в stage command payload и тестируются отдельно.
+
+Идеал тут еще есть куда точить, особенно в глубине `runtime_research.py`, но базовая проблема “весь operational brain живет в одном файле” уже закрыта.
+
+### Configured providers и transport discipline
+
+Раньше `data/providers/configured.py` был слишком близок к giant-risk hotspot. Теперь этот слой разнесен по ролям:
+
+- transport/auth/env/cache/retry живут отдельно;
+- security master отдельным модулем;
+- market/fundamentals/corporate actions живут отдельными provider-specific adapters;
+- есть retry/backoff, 429 handling, transient/permanent failure classification и contract tests по adapter path.
+
+Заодно сохранили compatibility bridge для старых monkeypatch-точек, чтобы рефакторинг не ломал runtime и smoke suite.
 
 ### Statistical skepticism
 
@@ -83,6 +109,20 @@ Baseline, linear path и boosting-модели уже едут в operational ru
 ### Reporting figures
 
 Этот хвост закрыт. Mandatory figures теперь рендерятся как отдельные SVG-артефакты и входят в report bundle.
+
+### CI и release gates
+
+CI стал заметно злее и полезнее:
+
+- `ruff`;
+- `mypy`;
+- configured-local smoke;
+- release bundle verification;
+- spec coverage consistency;
+- acceptance-to-tests consistency audit;
+- live-public smoke вынесен в отдельный регулярный workflow.
+
+То есть теперь строгий operational слой держится не только на локальной дисциплине, но и на реальном CI gate.
 
 ## Проверка по фазам
 
@@ -142,11 +182,11 @@ Baseline, linear path и boosting-модели уже едут в operational ru
 
 Что еще остается до совсем бесспорного “здесь не к чему подкопаться”:
 
-- orchestration все еще слишком тяготеет к тяжелому `runtime.py`, и его правильно было бы дальше резать на более явные stage runtimes;
+- orchestration brain уже вынесен из `runtime.py`, но `runtime_research.py` еще можно резать на более узкие research/report handlers;
 - randomized invariants уже есть, но полноценный mutation testing и более широкий property-based слой еще не закрыты;
 - execution/capacity реализм можно сделать еще злее через halted/no-open/liquidity cliff сценарии;
 - current model stack уже не ограничивается baseline'ами, но до максимально взрослого external ranking zoo еще есть пространство;
-- provenance хороший, но не полностью content-addressed на уровне immutable replay guarantee.
+- provenance хороший и уже content-addressed на gold/release path, но end-to-end immutable replay guarantee по всем слоям еще можно закрутить жестче.
 
 Итог простой:
 

@@ -21,11 +21,11 @@
 
 Эти артефакты опираются на:
 
-- [MASTER_SPEC.md](/E:/projecttype/docs/specs/MASTER_SPEC.md)
-- [machine_spec.yaml](/E:/projecttype/docs/specs/machine_spec.yaml)
-- [implementation_notes.md](/E:/projecttype/docs/implementation_notes.md)
-- [release_checklist.md](/E:/projecttype/docs/release_checklist.md)
-- [reproducible_local_runbook.md](/E:/projecttype/docs/runbooks/reproducible_local_runbook.md)
+- `docs/specs/MASTER_SPEC.md`
+- `docs/specs/machine_spec.yaml`
+- `docs/implementation_notes.md`
+- `docs/release_checklist.md`
+- `docs/runbooks/reproducible_local_runbook.md`
 
 Их задача простая:
 
@@ -47,7 +47,7 @@
 
 - Эти документы не заменяют код и тесты. Они нужны, чтобы код и тесты не начинали жить каждый по своей версии реальности.
 - Если реализация расходится с этими правилами, источником истины остается `MASTER_SPEC.md`, а расхождение должно быть явно зафиксировано.
-- Любая `TEMPORARY SIMPLIFICATION` обязана быть отражена здесь или в [implementation_notes.md](/E:/projecttype/docs/implementation_notes.md), иначе это уже не упрощение, а тихий долг.
+- Любая `TEMPORARY SIMPLIFICATION` обязана быть отражена здесь или в `docs/implementation_notes.md`, иначе это уже не упрощение, а тихий долг.
 
 ## Как использовать
 
