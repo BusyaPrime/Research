@@ -24,7 +24,8 @@
 - split protocol сохраняется отдельным артефактом и проверяет overlap/purge/embargo инварианты;
 - backtest идет только на OOF predictions;
 - evaluation protocol и data-usage trace сохраняются отдельным manifest-слоем;
-- есть gross/net/cost/capacity/regime/decay артефакты.
+- есть gross/net/cost/capacity/regime/decay артефакты;
+- uncertainty/FDR/stability diagnostics теперь тоже лежат в machine-readable виде.
 
 ### Reproducibility
 
@@ -55,6 +56,21 @@
 - requested report formats обязаны реально существовать, иначе release-capable run не считается завершенным;
 - synthetic path маркируется как `fixture_only` и не проходит release verifier;
 - review bundle с `pending_outputs`, `temporary_simplifications` или `release_eligible = false` verifier отклоняет.
+
+### Statistical skepticism
+
+Этот слой теперь тоже закрыт до рабочего состояния и больше не висит как благородное намерение.
+
+Что есть сейчас:
+
+- bootstrap confidence intervals для predictive и portfolio метрик;
+- `probabilistic_sharpe_ratio` и `deflated_sharpe_ratio`;
+- model hypothesis registry и FDR-контроль;
+- prediction correlation matrix;
+- stability gates и machine-readable `approval_summary`;
+- metamorphic regression-тесты на split и OOF инварианты.
+
+Это не заменяет будущий research science-максимум в духе полноценного PBO или больших experiment ledgers, но уже переводит слой статистической проверки из “можно было бы сделать” в реально работающий audit artifact.
 
 ### Model zoo
 

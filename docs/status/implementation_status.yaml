@@ -13,6 +13,9 @@ overall_status:
   runtime_capabilities_enforced: true
   evaluation_manifest_present: true
   split_protocol_artifacts_present: true
+  statistical_skepticism_layer_present: true
+  approval_summary_present: true
+  metamorphic_invariants_present: true
 phase_status:
   analyze_and_map: completed
   foundation: completed
@@ -76,6 +79,8 @@ acceptance_coverage:
   costs_capacity: covered
   evaluation_reporting: covered
   release_hardening: covered
+  statistical_skepticism: covered
+  metamorphic_invariants: covered
 temporary_simplifications: []
 open_gaps: []
 risk_level:

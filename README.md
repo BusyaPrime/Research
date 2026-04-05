@@ -30,6 +30,7 @@
 - labels/features/gold: label engine, registry-driven features, fold-safe preprocessing, gold panel assembly;
 - research loop: purged walk-forward splits, baseline models, tuning для линейных моделей, OOF predictions;
 - research governance: strict runtime policy, явный split protocol, evaluation manifest и data-usage trace по fold/model;
+- statistical skepticism: bootstrap uncertainty, probabilistic/deflated Sharpe, FDR-контроль, stability gates и machine-readable approval summary;
 - portfolio/backtest: target weights, turnover, execution simulation, costs, holdings state, gross/net accounting;
 - robustness/evaluation: capacity ladder, predictive metrics, regime breakdown, decay, ablation-матрицы, markdown/html report generation, persisted section bundle, figure artifacts и review bundle;
 - hardening: leakage guards, operational stage wiring, CI smoke-проверки, release checklist.
@@ -64,6 +65,7 @@
 - Gross и net результаты считаются отдельно.
 - Каждый run должен быть привязан к `dataset version`, `config hash`, `git commit`, `run id`, `timestamp`.
 - Unsupported experiment, missing requested report format и release-grade run с временными упрощениями не маскируются под `completed`.
+- Сильная метрика без uncertainty/FDR/stability diagnostics не считается “доказанной”, а идет в отчет как недопроверенная гипотеза.
 
 Если что-то из этого сломано, результат красивый, но исследовательски недействительный.
 
