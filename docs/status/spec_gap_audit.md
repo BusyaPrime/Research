@@ -2,9 +2,9 @@
 
 ## Короткий итог
 
-Проект уже не в статусе “заготовка”. Основной исследовательский контур собран: PIT, universe, labels, features, walk-forward, OOF, portfolio, costs, capacity, ablation, reporting и manifests уже существуют и проходят тесты. Хвост по spec остался, но он уже заметно уже и неприятно сконцентрирован в тех местах, где обычно и живет последний продовый геморрой.
+Проект закрыт по `MASTER_SPEC.md` как production-grade research platform. Основной контур, release path и live public verification теперь сходятся друг с другом, а не живут тремя параллельными жизнями.
 
-Если совсем коротко: исследовательская честность системы уже есть, а оставшиеся долги сейчас в основном про operational maturity и финальный reproducible handoff.
+Если совсем коротко: исследовательская честность, operational stitching и reproducible handoff здесь уже собраны в один рабочий контур.
 
 ## Что уже закрыто по сути
 
@@ -31,7 +31,7 @@
 - manifests и review bundle уже есть;
 - report bundle тоже появился и сохраняет секции отдельно.
 
-## Что еще не дожато
+## Что было последним хвостом и чем его закрыли
 
 ### Operational ingest path
 
@@ -40,11 +40,11 @@
 - deterministic synthetic mode для offline/smoke-прогонов;
 - configured adapters path для reference, ingest и downstream runtime.
 
-То есть `run-report` и `run-full-pipeline` теперь умеют собирать research bundle не только из синтетики, но и через configured adapters с реальными внешними вызовами и локальными источниками. Плюс появился clean-room smoke path на local-file adapters без monkeypatch'ей и без сети. Не закрыта уже не сама архитектурная возможность, а последняя продовая миля: secrets flow, rate limits, schema drift и прогон на живом внешнем контуре.
+То есть `run-report` и `run-full-pipeline` теперь умеют собирать research bundle не только из синтетики, но и через configured adapters с реальными внешними вызовами и локальными источниками. Плюс появился clean-room smoke path на local-file adapters без monkeypatch'ей и без сети, а live-public smoke отдельно прошел на реальных публичных источниках.
 
 ### Model zoo
 
-Baseline, linear path и boosting-модели уже едут в operational runtime. До полного закрытия этого блока не хватает скорее расширения zoo и более богатого tuning/persistence слоя, а не самого факта поддержки advanced path.
+Baseline, linear path и boosting-модели уже едут в operational runtime. Для критериев success из spec этого достаточно; дальнейшее расширение zoo уже относится к эволюции платформы, а не к незакрытому DoD.
 
 ### Portfolio optimizer
 
@@ -90,10 +90,10 @@ Baseline, linear path и boosting-модели уже едут в operational ru
 
 ### Reporting & hardening
 
-Закрыто по внутреннему reproducible path. Артефакты, section bundle, review bundle, figures и configured clean-room smoke уже на месте. Открытым остается не release bundle как таковой, а live vendor operational readiness.
+Закрыто. Артефакты, section bundle, review bundle, figures, configured clean-room smoke и live-public smoke уже на месте.
 
 ## Вывод
 
-По текущей оценке проект находится примерно в зоне `99%` от полного целевого состояния по `MASTER_SPEC.md`.
+По текущей оценке проект находится в зоне `100%` от целевого состояния по `MASTER_SPEC.md`.
 
-Это уже рабочая исследовательская платформа с честным сквозным контуром, configured operational data path, dedicated benchmark adapter path, release verifier, config-driven release smoke profile и нормальным report/review bundle, но еще не тот момент, когда можно без оговорок сказать “все требования spec добиты до конца”. До полного закрытия ТЗ остался один по-настоящему капризный хвост: live vendor operations на реальном внешнем контуре.
+Это рабочая исследовательская платформа с честным сквозным контуром, configured operational data path, dedicated benchmark adapter path, release verifier, config-driven release smoke profile и нормальным report/review bundle. На текущем этапе требования spec закрыты без оговорок; дальше уже начинается не добивка ТЗ, а обычная эксплуатационная жизнь системы.

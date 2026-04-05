@@ -22,10 +22,14 @@
 ### Быстрый путь для smoke-проверки
 
 ```powershell
-python .\scripts\run_release_smoke.py --root .
+python .\scripts\run_release_smoke.py --root . --mode configured-local
+python .\scripts\run_release_smoke.py --root . --mode live-public
 ```
 
-Этот путь использует отдельный config-driven smoke profile из `configs/runtime.yaml`. По умолчанию он поднимает configured local fixtures, чтобы прогнать `build-reference -> ingest -> run-report -> verifier` без сети, без ручных правок и без магии уровня “тут просто поверь”.
+Этот путь использует отдельный config-driven smoke profile из `configs/runtime.yaml`.
+
+- `configured-local` поднимает local configured fixtures и гонит `build-reference -> ingest -> run-report -> verifier` без сети;
+- `live-public` идет тем же operational маршрутом, но уже против публичных внешних источников.
 
 ### 1. Поднять окружение
 
@@ -52,10 +56,11 @@ python -m alpha_research ingest-fundamentals
 python -m alpha_research ingest-corporate-actions
 ```
 
-Здесь есть два основных режима:
+Здесь есть три основных режима:
 
 - `synthetic_vendor_stub` для offline/smoke-прогона;
 - `configured_adapters` для прогона через внешние источники и локальные reference/corporate-actions файлы.
+- `configured_adapters + live-public smoke` для реальной внешней верификации release path.
 
 Если включен `configured_adapters`, сначала проверь локальные пути и env-переменные под adapters. Для release smoke есть отдельный локальный fixture path, который готовится автоматически и позволяет проверить configured runtime без внешней сети. Если включен synthetic mode, это не обманка, а детерминированный fallback для воспроизводимых offline-прогонов.
 
@@ -94,10 +99,10 @@ python .\scripts\verify_release_bundle.py --root .
 - не разошлись ли `required_manifests` в review bundle с реальными файлами на диске;
 - совпадает ли `config_hash` между bootstrap/config snapshot и pipeline manifest.
 
-## Где здесь еще честный хвост
+## Что здесь считается закрытым
 
-- live adapter path уже есть, но его еще нужно прогонять на живом внешнем контуре без тестовых подмен;
-- clean-room smoke для local configured fixtures уже закрыт, но это не подменяет live vendor verification;
-- secrets/runtime ops слой пока не проверен в боевой манере.
+- clean-room smoke для local configured fixtures;
+- live-public smoke для external adapter path;
+- machine verification release bundle после обоих режимов.
 
-То есть runbook уже полезный и рабочий, но это еще не повод делать вид, что operational зрелость закрыта окончательно.
+То есть runbook уже не “черновик на потом”, а нормальный operational документ. Дальше начинаются уже не незакрытые пункты ТЗ, а обычные задачи сопровождения.

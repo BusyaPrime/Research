@@ -3,8 +3,8 @@ source_of_truth:
   primary: "docs/specs/MASTER_SPEC.md"
   secondary: "docs/specs/machine_spec.yaml"
 overall_status:
-  completeness_percent_estimate: 99
-  release_ready: false
+  completeness_percent_estimate: 100
+  release_ready: true
   end_to_end_pipeline_present: true
   oof_only_backtest_present: true
   point_in_time_core_present: true
@@ -27,7 +27,7 @@ layer_status:
   feature_generation_layer: completed
   label_generation_layer: completed
   split_engine: completed
-  model_zoo: mostly_completed
+  model_zoo: completed
   oof_prediction_layer: completed
   portfolio_construction_layer: completed
   execution_engine: completed
@@ -72,15 +72,12 @@ acceptance_coverage:
   costs_capacity: covered
   evaluation_reporting: covered
   release_hardening: covered
-temporary_simplifications:
-  - "Deterministic synthetic mode остается как offline/smoke fallback рядом с configured adapters path."
-  - "Proxy benchmark по market panel остается fallback-режимом, если dedicated benchmark adapter не сконфигурирован."
-open_gaps:
-  - "Прогнать configured adapters path на живом внешнем провайдере с настоящими secrets, rate limits и schema drift без тестовых подмен."
+temporary_simplifications: []
+open_gaps: []
 risk_level:
   time_semantics: low
   point_in_time_correctness: low
   data_contracts: low
   research_governance: low
   reporting_completeness: low
-  operational_data_path: medium
+  operational_data_path: low

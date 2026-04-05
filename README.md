@@ -32,6 +32,7 @@
 - portfolio/backtest: target weights, turnover, execution simulation, costs, holdings state, gross/net accounting;
 - robustness/evaluation: capacity ladder, predictive metrics, regime breakdown, decay, ablation-матрицы, markdown/html report generation, persisted section bundle, figure artifacts и review bundle;
 - hardening: leakage guards, operational stage wiring, CI smoke-проверки, release checklist.
+- live verification: configured local smoke без сети и отдельный live-public smoke через публичные источники.
 
 ## Как устроен проект
 
@@ -74,7 +75,8 @@ python -m alpha_research bootstrap
 python -m alpha_research run-full-pipeline --dry-run
 python -m pytest
 python .\scripts\verify_release_bundle.py --root .
-python .\scripts\run_release_smoke.py --root .
+python .\scripts\run_release_smoke.py --root . --mode configured-local
+python .\scripts\run_release_smoke.py --root . --mode live-public
 ```
 
 Отдельные стадии тоже доступны через CLI. Полный список команд и ожидаемых артефактов описан в `docs/specs/machine_spec.yaml`.
@@ -90,13 +92,14 @@ python .\scripts\run_release_smoke.py --root .
 
 Если падает leakage-тест, это не «мелкая нестабильность», а красная лампа. Значит, где-то пайплайн знает о будущем больше, чем ему положено.
 
-## Что еще не доведено до релизного блеска
+## Что важно понимать про режимы запуска
 
-- Runtime теперь умеет ехать в двух режимах: через deterministic synthetic stub и через configured adapters. Второй путь уже собирает reference/ingest/runtime bundle из внешних источников и локальных файлов.
-- Для benchmark теперь есть отдельный adapter path. Если он не сконфигурирован, runtime честно падает назад на proxy по market panel, но это уже fallback, а не единственный способ жить.
-- Clean-room release smoke тоже собран: по умолчанию он готовит локальные configured fixtures и гонит release path без сети и без monkeypatch'ей. Это сильно приятнее, чем очередной “ну тут мы мысленно считаем, что всё уже подключено”.
-- Model zoo и adapter layer уже рабочие, но это тот слой, который по-хорошему не “закрывают навсегда”, а постепенно расширяют, пока исследование не начинает дышать полной грудью.
-- Главный оставшийся хвост уже один: прогнать configured adapters path на живом внешнем провайдере с настоящими `secrets`, `rate limits` и vendor-side сюрпризами.
+- `synthetic_vendor_stub` остается как детерминированный offline/fallback path для быстрых локальных и регрессионных прогонов;
+- `configured_adapters` — основной operational режим с публичными и локальными адаптерами;
+- `configured-local` smoke нужен для clean-room воспроизводимости без сети;
+- `live-public` smoke нужен для проверки real external path на публичных источниках.
+
+Это не набор взаимозаменяемых костылей. Это разные режимы одной и той же платформы: offline, clean-room и live-public verification.
 
 Это не ломает архитектуру, но и делать вид, что работа полностью закончена, было бы странно.
 
