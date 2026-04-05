@@ -52,7 +52,7 @@ class ProviderConfig(FrozenModel):
     restatement_tracking: bool | None = None
     required_fields: list[str] | None = None
     ticker_is_not_primary_key: bool | None = None
-    adapters: list["AdapterConfig"] | None = None
+    adapters: list[AdapterConfig] | None = None
 
 
 class AdapterConfig(FrozenModel):
@@ -61,6 +61,10 @@ class AdapterConfig(FrozenModel):
     enabled: bool = True
     base_url: str | None = None
     timeout_seconds: int = 30
+    max_retries: int = 3
+    backoff_seconds: float = 0.5
+    cache_enabled: bool = False
+    cache_subdir: str | None = None
     local_path: str | None = None
     local_path_env: str | None = None
     api_key_env: str | None = None
