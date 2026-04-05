@@ -1,0 +1,118 @@
+snapshot_date: "2026-04-05"
+clauses:
+  - clause_id: time_semantics_next_open_execution
+    status: enforced
+    implemented_in:
+      - src/alpha_research/time/calendar.py
+      - src/alpha_research/labels/engine.py
+      - src/alpha_research/pipeline/runtime.py
+    tested_by:
+      - tests/unit/test_calendar.py
+      - tests/integration/test_label_engine.py
+    surfaced_in:
+      - configs/project.yaml
+      - docs/status/spec_gap_audit.md
+  - clause_id: fundamentals_available_from_only
+    status: enforced
+    implemented_in:
+      - src/alpha_research/pit/builders.py
+      - src/alpha_research/pit/asof_join.py
+      - src/alpha_research/pit/timestamp_guards.py
+    tested_by:
+      - tests/integration/test_pit_engine.py
+    surfaced_in:
+      - schemas/table_schemas.yaml
+      - docs/status/spec_gap_audit.md
+  - clause_id: fold_safe_preprocessing
+    status: enforced
+    implemented_in:
+      - src/alpha_research/preprocessing/transforms.py
+      - src/alpha_research/training/oof.py
+    tested_by:
+      - tests/integration/test_preprocessing.py
+      - tests/integration/test_models_oof.py
+    surfaced_in:
+      - manifests/evaluation_manifest
+      - docs/status/spec_gap_audit.md
+  - clause_id: purged_embargoed_walk_forward
+    status: enforced
+    implemented_in:
+      - src/alpha_research/splits/engine.py
+    tested_by:
+      - tests/integration/test_split_engine.py
+      - tests/integration/test_split_protocol_randomized.py
+    surfaced_in:
+      - manifests/evaluation_manifest
+      - manifests/fold_metadata
+  - clause_id: oof_only_backtest
+    status: enforced
+    implemented_in:
+      - src/alpha_research/training/oof.py
+      - src/alpha_research/backtest/engine.py
+      - src/alpha_research/pipeline/runtime.py
+    tested_by:
+      - tests/integration/test_models_oof.py
+      - tests/integration/test_pipeline_release.py
+    surfaced_in:
+      - manifests/oof_manifest
+      - manifests/evaluation_manifest
+  - clause_id: strict_operational_policy
+    status: enforced
+    implemented_in:
+      - src/alpha_research/pipeline/policy.py
+      - src/alpha_research/pipeline/runtime.py
+      - src/alpha_research/release/verification.py
+    tested_by:
+      - tests/integration/test_runtime_policy.py
+      - tests/integration/test_release_verification.py
+    surfaced_in:
+      - manifests/pipeline_run_manifest
+      - manifests/review_bundle
+  - clause_id: statistical_skepticism_and_approval
+    status: enforced
+    implemented_in:
+      - src/alpha_research/evaluation/skepticism.py
+      - src/alpha_research/evaluation/model_stability.py
+      - src/alpha_research/pipeline/runtime.py
+    tested_by:
+      - tests/integration/test_evaluation_reporting.py
+      - tests/integration/test_metamorphic_invariants.py
+    surfaced_in:
+      - manifests/skepticism_manifest
+      - manifests/approval_summary
+  - clause_id: registry_driven_model_layer
+    status: enforced
+    implemented_in:
+      - src/alpha_research/models/registry.py
+      - src/alpha_research/models/advanced_linear.py
+      - src/alpha_research/training/oof.py
+      - src/alpha_research/pipeline/runtime.py
+    tested_by:
+      - tests/integration/test_models_oof.py
+      - tests/integration/test_pipeline_release.py
+    surfaced_in:
+      - diagnostics/model_registry
+      - diagnostics/model_stability
+  - clause_id: release_bundle_complete_or_fail
+    status: enforced
+    implemented_in:
+      - src/alpha_research/evaluation/reporting.py
+      - src/alpha_research/pipeline/runtime.py
+      - src/alpha_research/release/verification.py
+    tested_by:
+      - tests/integration/test_pipeline_release.py
+      - tests/integration/test_release_verification.py
+      - tests/integration/test_release_smoke.py
+    surfaced_in:
+      - manifests/report_bundle
+      - manifests/review_bundle
+  - clause_id: reproducible_smoke_paths
+    status: enforced
+    implemented_in:
+      - src/alpha_research/release/smoke.py
+      - scripts/run_release_smoke.py
+    tested_by:
+      - tests/integration/test_release_smoke.py
+    surfaced_in:
+      - docs/runbooks/reproducible_local_runbook.md
+      - .github/workflows/release_smoke.yml
