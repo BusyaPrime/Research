@@ -31,6 +31,15 @@ from alpha_research.evaluation.metrics import (
     compute_regime_breakdown,
 )
 from alpha_research.evaluation.reporting import render_final_report, render_final_report_html, render_report_sections
+from alpha_research.evaluation.skepticism import (
+    build_model_hypothesis_registry,
+    compute_multiple_testing_diagnostics,
+    compute_portfolio_uncertainty,
+    compute_prediction_correlation_matrix,
+    compute_predictive_uncertainty,
+    compute_stability_gates,
+    summarize_approval_recommendation,
+)
 from alpha_research.features.engine import FeatureBuildResult, build_feature_panel
 from alpha_research.features.registry import feature_names_by_family, load_feature_registry
 from alpha_research.labels.engine import build_label_panel
@@ -751,6 +760,87 @@ def execute_operational_command(
     artifacts.append(
         _persist_frame(paths.root, diagnostics_dir / "ablation_results.parquet", "ablation_results", ablation.results)
     )
+    prediction_correlation = compute_prediction_correlation_matrix(oof.predictions)
+    artifacts.append(
+        _persist_frame(
+            paths.root,
+            diagnostics_dir / "prediction_correlation_matrix.parquet",
+            "prediction_correlation_matrix",
+            prediction_correlation,
+        )
+    )
+
+    effective_trial_count = (
+        int(oof.predictions["model_name"].dropna().nunique())
+        + int(len(ablation.results))
+        + int(len(cost_sensitivity))
+        + int(decay_curve["horizon_days"].dropna().nunique())
+    )
+    predictive_uncertainty = compute_predictive_uncertainty(
+        primary_predictions,
+        gold.panel[["date", "security_id", experiment.label]],
+        label_column=experiment.label,
+        seed=loaded.bundle.project.default_random_seed,
+    )
+    portfolio_uncertainty = compute_portfolio_uncertainty(
+        backtest.daily_state,
+        trial_count=effective_trial_count,
+        seed=loaded.bundle.project.default_random_seed,
+    )
+    model_hypotheses = build_model_hypothesis_registry(
+        oof.predictions,
+        gold.panel[["date", "security_id", experiment.label]],
+        label_column=experiment.label,
+    )
+    multiple_testing = compute_multiple_testing_diagnostics(
+        model_hypotheses,
+        effective_trial_count=effective_trial_count,
+    )
+    stability_gates = compute_stability_gates(
+        predictive_uncertainty=predictive_uncertainty,
+        portfolio_uncertainty=portfolio_uncertainty,
+        regime_metrics=regime_metrics,
+        cost_sensitivity=cost_sensitivity,
+        ablation_results=ablation.results,
+        holdings_snapshots=backtest.holdings_snapshots,
+        capacity_results=capacity.results,
+    )
+    approval_summary = summarize_approval_recommendation(
+        stability_gates=stability_gates,
+        multiple_testing=multiple_testing,
+        capability_class=capability.capability_class,
+        release_eligible=capability.allows_release_bundle and not temporary_simplifications,
+    )
+    artifacts.append(
+        _persist_frame(paths.root, diagnostics_dir / "predictive_uncertainty.parquet", "predictive_uncertainty", predictive_uncertainty)
+    )
+    artifacts.append(
+        _persist_frame(paths.root, diagnostics_dir / "portfolio_uncertainty.parquet", "portfolio_uncertainty", portfolio_uncertainty)
+    )
+    artifacts.append(
+        _persist_frame(paths.root, diagnostics_dir / "model_hypotheses.parquet", "model_hypotheses", model_hypotheses)
+    )
+    artifacts.append(
+        _persist_frame(paths.root, diagnostics_dir / "multiple_testing.parquet", "multiple_testing", multiple_testing)
+    )
+    artifacts.append(
+        _persist_frame(paths.root, diagnostics_dir / "stability_gates.parquet", "stability_gates", stability_gates)
+    )
+    skepticism_manifest = {
+        "predictive_uncertainty_path": str((diagnostics_dir / "predictive_uncertainty.parquet").relative_to(paths.root)),
+        "portfolio_uncertainty_path": str((diagnostics_dir / "portfolio_uncertainty.parquet").relative_to(paths.root)),
+        "model_hypotheses_path": str((diagnostics_dir / "model_hypotheses.parquet").relative_to(paths.root)),
+        "multiple_testing_path": str((diagnostics_dir / "multiple_testing.parquet").relative_to(paths.root)),
+        "stability_gates_path": str((diagnostics_dir / "stability_gates.parquet").relative_to(paths.root)),
+        "effective_trial_count": effective_trial_count,
+        "approval_status": approval_summary["status"],
+    }
+    artifacts.append(
+        _persist_json_artifact(paths.root, manifests_dir / "skepticism_manifest.json", "skepticism_manifest", skepticism_manifest)
+    )
+    artifacts.append(
+        _persist_json_artifact(paths.root, manifests_dir / "approval_summary.json", "approval_summary", approval_summary)
+    )
 
     model_comparison_rows = []
     for model_name, frame in predictive_metrics.groupby("model_name", sort=True):
@@ -799,6 +889,26 @@ def execute_operational_command(
                 "- predict_scope: test_only",
             ]
         ),
+        "uncertainty_analysis": "\n".join(
+            [
+                *_summary_lines_from_metrics(predictive_uncertainty),
+                *_summary_lines_from_metrics(portfolio_uncertainty),
+            ]
+        ),
+        "false_discovery_control": "\n".join(
+            [
+                f"- effective_trial_count: {effective_trial_count}",
+                f"- significant_hypotheses: {int(multiple_testing['rejected_fdr'].fillna(False).sum()) if 'rejected_fdr' in multiple_testing.columns else 0}",
+                *(
+                    [
+                        f"- {row['hypothesis_id']}: p={row['p_value']}, rejected_fdr={row['rejected_fdr']}"
+                        for row in multiple_testing.to_dict(orient='records')
+                    ]
+                    if not multiple_testing.empty
+                    else ["- no_hypotheses: 0"]
+                ),
+            ]
+        ),
         "model_comparison": "\n".join(_summary_lines_from_metrics(model_comparison)),
         "backtest_results": "\n".join(
             [
@@ -823,6 +933,15 @@ def execute_operational_command(
             ]
         ),
         "ablation_analysis": "\n".join(_ablation_summary_lines(ablation.results)),
+        "approval_summary": "\n".join(
+            [
+                f"- status: {approval_summary['status']}",
+                f"- reason: {approval_summary['reason']}",
+                f"- failed_gate_count: {approval_summary['failed_gate_count']}",
+                f"- significant_hypothesis_count: {approval_summary['significant_hypothesis_count']}",
+            ]
+            + [f"- failed_gate::{gate_name}" for gate_name in approval_summary["failed_gates"]]
+        ),
     }
     report_text = render_final_report(
         loaded.bundle.reporting,
@@ -981,6 +1100,8 @@ def execute_operational_command(
             "dataset_manifest": str((manifests_dir / "dataset_manifest.json").relative_to(paths.root)),
             "oof_manifest": str((manifests_dir / "oof_manifest.json").relative_to(paths.root)),
             "evaluation_manifest": str((manifests_dir / "evaluation_manifest.json").relative_to(paths.root)),
+            "skepticism_manifest": str((manifests_dir / "skepticism_manifest.json").relative_to(paths.root)),
+            "approval_summary": str((manifests_dir / "approval_summary.json").relative_to(paths.root)),
             "backtest_manifest": str((manifests_dir / "backtest_manifest.json").relative_to(paths.root)),
             "capacity_manifest": str((manifests_dir / "capacity_manifest.json").relative_to(paths.root)),
             "pipeline_run_manifest": str(manifest_path.relative_to(paths.root)),
@@ -1001,6 +1122,7 @@ def execute_operational_command(
             "net_sharpe": portfolio_metrics.set_index("metric")["value"].to_dict().get("net_sharpe"),
             "max_drawdown": portfolio_metrics.set_index("metric")["value"].to_dict().get("max_drawdown"),
             "ablation_rows": int(len(ablation.results)),
+            "approval_status": approval_summary["status"],
         },
         pending_outputs=pending_formats,
         temporary_simplifications=temporary_simplifications,

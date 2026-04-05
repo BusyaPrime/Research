@@ -37,6 +37,8 @@ def _build_release_fixture(root: Path) -> Path:
     dataset_manifest = _write_json(manifests_dir / "dataset_manifest.json", {"status": "ok"})
     oof_manifest = _write_json(manifests_dir / "oof_manifest.json", {"status": "ok"})
     evaluation_manifest = _write_json(manifests_dir / "evaluation_manifest.json", {"status": "ok"})
+    skepticism_manifest = _write_json(manifests_dir / "skepticism_manifest.json", {"status": "ok"})
+    approval_summary = _write_json(manifests_dir / "approval_summary.json", {"status": "approved_for_extended_research"})
     backtest_manifest = _write_json(manifests_dir / "backtest_manifest.json", {"status": "ok"})
     capacity_manifest = _write_json(manifests_dir / "capacity_manifest.json", {"status": "ok"})
 
@@ -76,6 +78,8 @@ def _build_release_fixture(root: Path) -> Path:
                 "dataset_manifest": str(dataset_manifest.relative_to(root)),
                 "oof_manifest": str(oof_manifest.relative_to(root)),
                 "evaluation_manifest": str(evaluation_manifest.relative_to(root)),
+                "skepticism_manifest": str(skepticism_manifest.relative_to(root)),
+                "approval_summary": str(approval_summary.relative_to(root)),
                 "backtest_manifest": str(backtest_manifest.relative_to(root)),
                 "capacity_manifest": str(capacity_manifest.relative_to(root)),
                 "pipeline_run_manifest": str(pipeline_manifest.relative_to(root)),
@@ -102,7 +106,7 @@ def test_verify_release_bundle_accepts_complete_bundle(tmp_path: Path) -> None:
     review_bundle_path = _build_release_fixture(tmp_path)
     result = verify_release_bundle(tmp_path, review_bundle_path)
     assert result.ok is True
-    assert result.manifest_count == 6
+    assert result.manifest_count == 8
     assert result.report_count == 2
     assert result.section_count == 1
     assert result.figure_count == 1

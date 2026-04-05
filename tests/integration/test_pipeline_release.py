@@ -381,11 +381,14 @@ def test_run_report_builds_release_bundle_and_stable_regression_fixture(workspac
     assert review_bundle["key_metrics"]["fold_count"] >= 1
     assert review_bundle["key_metrics"]["dataset_row_count"] > 0
     assert review_bundle["key_metrics"]["ablation_rows"] == 2
+    assert review_bundle["key_metrics"]["approval_status"] == "not_release_eligible"
     assert sorted(report_bundle["generated_formats"]) == ["html", "markdown"]
     assert report_bundle["section_artifacts"]
     assert report_bundle["figure_artifacts"]
     assert all(item["status"] == "generated" for item in report_bundle["figure_artifacts"])
     assert any(artifact["name"] == "ablation_results" for artifact in manifest["artifacts"])
+    assert any(artifact["name"] == "predictive_uncertainty" for artifact in manifest["artifacts"])
+    assert any(artifact["name"] == "approval_summary" for artifact in manifest["artifacts"])
 
 
 def test_ci_workflow_runs_unit_integration_and_leakage_suites(repo_root) -> None:

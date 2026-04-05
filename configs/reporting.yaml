@@ -8,6 +8,8 @@ include_sections:
 - feature_catalog
 - validation_protocol
 - evaluation_protocol
+- uncertainty_analysis
+- false_discovery_control
 - model_comparison
 - backtest_results
 - cost_sensitivity
@@ -15,6 +17,7 @@ include_sections:
 - regime_analysis
 - decay_analysis
 - ablation_analysis
+- approval_summary
 - limitations
 - next_steps
 mandatory_figures:

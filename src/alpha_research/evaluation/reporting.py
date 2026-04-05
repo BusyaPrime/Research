@@ -14,6 +14,8 @@ SECTION_TITLES = {
     "feature_catalog": "Каталог фич",
     "validation_protocol": "Схема валидации",
     "evaluation_protocol": "Контракт оценки",
+    "uncertainty_analysis": "Статистическая неопределенность",
+    "false_discovery_control": "Контроль ложных открытий",
     "model_comparison": "Сравнение моделей",
     "backtest_results": "Результаты бэктеста",
     "cost_sensitivity": "Чувствительность к костам",
@@ -21,6 +23,7 @@ SECTION_TITLES = {
     "regime_analysis": "Анализ по режимам",
     "decay_analysis": "Анализ затухания сигнала",
     "ablation_analysis": "Ablation-анализ",
+    "approval_summary": "Решение по запуску",
     "limitations": "Ограничения",
     "next_steps": "Что делать дальше",
 }
