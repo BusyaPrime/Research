@@ -155,6 +155,10 @@ def test_prediction_manifests_contain_coverage_by_fold() -> None:
     )
     assert result.manifest["coverage_by_fold"]
     assert set(result.coverage_by_fold.columns) >= {"fold_id", "model_name", "row_count", "unique_dates"}
+    assert result.manifest["evaluation_protocol"] == "train_valid_refit_then_test"
+    assert result.manifest["oof_purity_checks"]["unique_prediction_rows"] is True
+    assert not result.data_usage_trace.empty
+    assert set(result.data_usage_trace.columns) >= {"fold_id", "model_name", "preprocessing_fit_scope", "final_fit_scope", "predict_scope"}
 
 
 def test_gradient_boosting_ranker_runs_in_oof_path_with_tuning() -> None:
@@ -173,3 +177,19 @@ def test_gradient_boosting_ranker_runs_in_oof_path_with_tuning() -> None:
     assert set(result.predictions["model_name"]) == {"gradient_boosting_ranker"}
     assert not result.tuning_diagnostics.empty
     assert metric > 0.15
+
+
+def test_pure_train_only_protocol_is_explicit_in_data_usage_trace() -> None:
+    bundle = _cached_bundle()
+    folds = _cached_folds()
+    result = generate_oof_predictions(
+        bundle.panel,
+        folds[:1],
+        model_specs=[ModelRunSpec(name="ridge_regression", alpha_grid=(0.1, 1.0))],
+        feature_columns=bundle.feature_columns,
+        label_column=bundle.label_column,
+        dataset_version="ds_protocol",
+        evaluation_protocol="pure_train_only_then_test",
+    )
+    assert result.manifest["evaluation_protocol"] == "pure_train_only_then_test"
+    assert set(result.data_usage_trace["final_fit_scope"]) == {"train_only"}

@@ -43,6 +43,113 @@ class SplitArtifacts:
     folds: list[FoldDefinition]
     metadata: pd.DataFrame
     timeline_plot: str
+    protocol: "ValidationProtocol"
+    role_matrix: pd.DataFrame
+
+
+@dataclass(frozen=True)
+class ValidationProtocol:
+    folds: list[FoldDefinition]
+    primary_horizon_days: int
+    min_train_observations: int
+    allow_small_fixture_splits: bool
+
+    def assert_no_overlap(self) -> None:
+        for fold in self.folds:
+            overlap = (
+                set(fold.train_dates) & set(fold.valid_dates)
+                | set(fold.train_dates) & set(fold.test_dates)
+                | set(fold.valid_dates) & set(fold.test_dates)
+            )
+            if overlap:
+                raise ValueError(f"{fold.fold_id}: обнаружен overlap между ролями дат: {sorted(overlap)}")
+
+    def assert_min_sample_sizes(self) -> None:
+        for fold in self.folds:
+            observed_rows = len(fold.train_dates) + len(fold.valid_dates) + len(fold.test_dates)
+            if observed_rows < self.min_train_observations and not self.allow_small_fixture_splits:
+                raise ValueError(
+                    f"{fold.fold_id}: недостаточно наблюдений для strict split policy "
+                    f"({observed_rows} < {self.min_train_observations})."
+                )
+
+    def assert_purge_validity(self, calendar: ExchangeCalendarAdapter) -> None:
+        for fold in self.folds:
+            if fold.valid_start is None:
+                continue
+            for train_date in fold.train_dates:
+                label_window = calendar.label_window(train_date, self.primary_horizon_days)
+                if label_window.end_date >= fold.valid_start:
+                    raise ValueError(
+                        f"{fold.fold_id}: purge invalid, train date {train_date.date()} пересекает validation окно."
+                    )
+            if fold.test_start is None:
+                continue
+            for valid_date in fold.valid_dates:
+                label_window = calendar.label_window(valid_date, self.primary_horizon_days)
+                if label_window.end_date >= fold.test_start:
+                    raise ValueError(
+                        f"{fold.fold_id}: purge invalid, valid date {valid_date.date()} пересекает test окно."
+                    )
+
+    def assert_embargo_validity(self, calendar: ExchangeCalendarAdapter) -> None:
+        for fold in self.folds:
+            if fold.valid_start is not None and fold.train_dates:
+                distance = calendar.trading_day_distance(fold.train_dates[-1], fold.valid_start)
+                if distance <= fold.embargo_days_applied:
+                    raise ValueError(
+                        f"{fold.fold_id}: embargo invalid между train и valid ({distance} <= {fold.embargo_days_applied})."
+                    )
+            if fold.test_start is not None and fold.valid_dates:
+                distance = calendar.trading_day_distance(fold.valid_dates[-1], fold.test_start)
+                if distance <= fold.embargo_days_applied:
+                    raise ValueError(
+                        f"{fold.fold_id}: embargo invalid между valid и test ({distance} <= {fold.embargo_days_applied})."
+                    )
+
+    def assert_calendar_contiguity(self) -> None:
+        for fold in self.folds:
+            for role_name, role_dates in (
+                ("train", fold.train_dates),
+                ("valid", fold.valid_dates),
+                ("test", fold.test_dates),
+            ):
+                if tuple(sorted(role_dates)) != role_dates:
+                    raise ValueError(f"{fold.fold_id}: даты в роли {role_name} потеряли монотонность.")
+
+    def assert_label_window_separation(self, calendar: ExchangeCalendarAdapter) -> None:
+        for fold in self.folds:
+            for train_date in fold.train_dates:
+                train_window = calendar.label_window(train_date, self.primary_horizon_days)
+                for boundary in (fold.valid_start, fold.test_start):
+                    if boundary is not None and train_window.end_date >= boundary:
+                        raise ValueError(
+                            f"{fold.fold_id}: label window для {train_date.date()} заходит за boundary {boundary.date()}."
+                        )
+
+    def assert_all(self, calendar: ExchangeCalendarAdapter) -> None:
+        self.assert_no_overlap()
+        self.assert_min_sample_sizes()
+        self.assert_purge_validity(calendar)
+        self.assert_embargo_validity(calendar)
+        self.assert_calendar_contiguity()
+        self.assert_label_window_separation(calendar)
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "fold_count": len(self.folds),
+            "primary_horizon_days": self.primary_horizon_days,
+            "min_train_observations": self.min_train_observations,
+            "allow_small_fixture_splits": self.allow_small_fixture_splits,
+            "checks": {
+                "no_overlap": True,
+                "min_sample_sizes": True,
+                "purge_validity": True,
+                "embargo_validity": True,
+                "calendar_contiguity": True,
+                "label_window_separation": True,
+            },
+        }
 
 
 def _unique_valid_dates(panel: pd.DataFrame) -> pd.DatetimeIndex:
@@ -140,10 +247,27 @@ def build_validation_protocol_report(folds: list[FoldDefinition]) -> str:
 def persist_fold_metadata(artifacts: SplitArtifacts, path: Path) -> Path:
     payload = {
         "timeline_plot": artifacts.timeline_plot,
+        "protocol": artifacts.protocol.to_dict(),
         "folds": [fold.to_dict() for fold in artifacts.folds],
         "metadata": artifacts.metadata.to_dict(orient="records"),
+        "role_matrix": artifacts.role_matrix.to_dict(orient="records"),
     }
     return write_json(payload, path)
+
+
+def _build_role_matrix(folds: list[FoldDefinition]) -> pd.DataFrame:
+    rows: list[dict[str, object]] = []
+    for fold in folds:
+        for role_name, role_dates in (
+            ("train", fold.train_dates),
+            ("valid", fold.valid_dates),
+            ("test", fold.test_dates),
+        ):
+            for date in role_dates:
+                rows.append({"fold_id": fold.fold_id, "date": date, "role": role_name})
+    if not rows:
+        return pd.DataFrame(columns=["fold_id", "date", "role"])
+    return pd.DataFrame(rows).sort_values(["date", "fold_id", "role"], kind="stable").reset_index(drop=True)
 
 
 def generate_walk_forward_splits(
@@ -191,9 +315,12 @@ def generate_walk_forward_splits(
         if overlap:
             raise ValueError(f"Split generation produced overlapping dates: {sorted(overlap)}")
 
-        if len(train_dates) + len(valid_dates) + len(test_dates) < split_config.min_train_observations and not folds:
-            # Allow small synthetic fixtures after the first fold check by not hard-failing later folds.
-            pass
+        observed_rows = len(train_dates) + len(valid_dates) + len(test_dates)
+        if observed_rows < split_config.min_train_observations and not split_config.allow_small_fixture_splits:
+            raise ValueError(
+                "Strict split policy отвергла fold из-за слишком маленькой выборки "
+                f"({observed_rows} < {split_config.min_train_observations})."
+            )
 
         fold = FoldDefinition(
             fold_id=f"fold_{len(folds):03d}",
@@ -214,5 +341,23 @@ def generate_walk_forward_splits(
         folds.append(fold)
         cursor += step
 
+    if not folds:
+        raise ValueError("Split generation did not produce any folds for the requested configuration.")
+
+    protocol = ValidationProtocol(
+        folds=folds,
+        primary_horizon_days=primary_horizon_days,
+        min_train_observations=split_config.min_train_observations,
+        allow_small_fixture_splits=split_config.allow_small_fixture_splits,
+    )
+    protocol.assert_all(calendar)
+
     metadata = _fold_metadata_frame(folds)
-    return SplitArtifacts(folds=folds, metadata=metadata, timeline_plot=build_validation_protocol_report(folds))
+    role_matrix = _build_role_matrix(folds)
+    return SplitArtifacts(
+        folds=folds,
+        metadata=metadata,
+        timeline_plot=build_validation_protocol_report(folds),
+        protocol=protocol,
+        role_matrix=role_matrix,
+    )

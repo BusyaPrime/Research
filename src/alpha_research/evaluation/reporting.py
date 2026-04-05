@@ -13,6 +13,7 @@ SECTION_TITLES = {
     "data_lineage": "Происхождение данных",
     "feature_catalog": "Каталог фич",
     "validation_protocol": "Схема валидации",
+    "evaluation_protocol": "Контракт оценки",
     "model_comparison": "Сравнение моделей",
     "backtest_results": "Результаты бэктеста",
     "cost_sensitivity": "Чувствительность к костам",

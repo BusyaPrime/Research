@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class FrozenModel(BaseModel):
@@ -186,6 +186,7 @@ class SplitsConfig(FrozenModel):
     nested_validation: bool
     min_train_observations: int
     persist_fold_artifacts: bool
+    allow_small_fixture_splits: bool = False
 
 
 class PortfolioConfig(FrozenModel):
@@ -271,6 +272,14 @@ class RuntimeIngestConfig(FrozenModel):
     symbol_allowlist: list[str] | None = None
 
 
+class RuntimePolicyConfig(FrozenModel):
+    strict_research: bool = True
+    strict_operational: bool = True
+    allow_temporary_simplifications: bool = False
+    release_requires_zero_pending_outputs: bool = True
+    enforce_supported_operational_experiment: bool = True
+
+
 class RuntimeReleaseSmokeConfig(FrozenModel):
     enabled: bool
     run_ingest_commands: bool
@@ -280,6 +289,8 @@ class RuntimeReleaseSmokeConfig(FrozenModel):
     experiment_key: str
     max_model_trials: int
     cost_scenarios: list[str]
+    ablation_max_feature_family_scenarios: int | None = None
+    ablation_max_preprocessing_scenarios: int | None = None
     provider_mode_override: Literal["synthetic_vendor_stub", "configured_adapters"] | None = None
     prepare_local_configured_fixtures: bool = False
     preferred_symbols: list[str] | None = None
@@ -290,6 +301,9 @@ class RuntimeReleaseSmokeConfig(FrozenModel):
 
 class RuntimeConfig(FrozenModel):
     ingest: RuntimeIngestConfig
+    operational_experiment_key: str
+    evaluation_protocol: Literal["train_valid_refit_then_test", "pure_train_only_then_test"] = "train_valid_refit_then_test"
+    policy: RuntimePolicyConfig = Field(default_factory=RuntimePolicyConfig)
     release_smoke: RuntimeReleaseSmokeConfig
 
 

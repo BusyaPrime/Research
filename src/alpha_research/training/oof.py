@@ -38,6 +38,7 @@ class OOFRunResult:
     predictions: pd.DataFrame
     coverage_by_fold: pd.DataFrame
     tuning_diagnostics: pd.DataFrame
+    data_usage_trace: pd.DataFrame
     manifest: dict[str, object]
 
 
@@ -92,6 +93,65 @@ def _build_coverage_by_fold(predictions: pd.DataFrame) -> pd.DataFrame:
     )
 
 
+def _date_bounds(frame: pd.DataFrame) -> tuple[str | None, str | None]:
+    if frame.empty:
+        return None, None
+    start = pd.Timestamp(frame["date"].min()).date().isoformat()
+    end = pd.Timestamp(frame["date"].max()).date().isoformat()
+    return start, end
+
+
+def _build_data_usage_row(
+    *,
+    fold_id: str,
+    model_name: str,
+    protocol: str,
+    preprocessing_fit_frame: pd.DataFrame,
+    tuning_frame: pd.DataFrame,
+    final_fit_frame: pd.DataFrame,
+    predict_frame: pd.DataFrame,
+) -> dict[str, object]:
+    preprocessing_start, preprocessing_end = _date_bounds(preprocessing_fit_frame)
+    tuning_start, tuning_end = _date_bounds(tuning_frame)
+    final_fit_start, final_fit_end = _date_bounds(final_fit_frame)
+    predict_start, predict_end = _date_bounds(predict_frame)
+    return {
+        "fold_id": fold_id,
+        "model_name": model_name,
+        "protocol": protocol,
+        "preprocessing_fit_scope": "train_only",
+        "preprocessing_fit_start": preprocessing_start,
+        "preprocessing_fit_end": preprocessing_end,
+        "preprocessing_fit_rows": int(len(preprocessing_fit_frame)),
+        "tuning_scope": "valid_only" if not tuning_frame.empty else "not_used",
+        "tuning_start": tuning_start,
+        "tuning_end": tuning_end,
+        "tuning_rows": int(len(tuning_frame)),
+        "final_fit_scope": "train_plus_valid" if protocol == "train_valid_refit_then_test" else "train_only",
+        "final_fit_start": final_fit_start,
+        "final_fit_end": final_fit_end,
+        "final_fit_rows": int(len(final_fit_frame)),
+        "predict_scope": "test_only",
+        "predict_start": predict_start,
+        "predict_end": predict_end,
+        "predict_rows": int(len(predict_frame)),
+    }
+
+
+def _assert_oof_purity(predictions: pd.DataFrame, folds: list[FoldDefinition]) -> None:
+    duplicates = predictions.duplicated(subset=["date", "security_id", "model_name"], keep=False)
+    if duplicates.any():
+        raise ValueError("OOF predictions must be unique by date, security_id, and model_name.")
+
+    fold_lookup = {fold.fold_id: set(fold.test_dates) for fold in folds}
+    for row in predictions[["fold_id", "date"]].itertuples(index=False):
+        expected_dates = fold_lookup.get(str(row.fold_id))
+        if expected_dates is None:
+            raise ValueError(f"OOF predictions reference unknown fold_id: {row.fold_id}")
+        if pd.Timestamp(row.date) not in expected_dates:
+            raise ValueError(f"OOF prediction for fold {row.fold_id} leaked outside its test window.")
+
+
 def generate_oof_predictions(
     panel: pd.DataFrame,
     folds: list[FoldDefinition],
@@ -103,7 +163,11 @@ def generate_oof_predictions(
     config_hash: str = "unknown",
     prediction_timestamp: str | pd.Timestamp | None = None,
     preprocessing_spec: PreprocessingSpec | None = None,
+    evaluation_protocol: str = "train_valid_refit_then_test",
 ) -> OOFRunResult:
+    if evaluation_protocol not in {"train_valid_refit_then_test", "pure_train_only_then_test"}:
+        raise ValueError(f"Unsupported evaluation protocol: {evaluation_protocol}")
+
     frame = panel.copy()
     frame["date"] = pd.to_datetime(frame["date"], errors="coerce").dt.normalize()
     if "row_valid_flag" in frame.columns:
@@ -113,6 +177,7 @@ def generate_oof_predictions(
     prediction_ts = prediction_ts.tz_localize("UTC") if prediction_ts.tzinfo is None else prediction_ts.tz_convert("UTC")
     prediction_rows: list[pd.DataFrame] = []
     tuning_rows: list[dict[str, object]] = []
+    data_usage_rows: list[dict[str, object]] = []
 
     for fold in folds:
         train_frame = frame.loc[frame["date"].isin(fold.train_dates)].copy()
@@ -121,8 +186,9 @@ def generate_oof_predictions(
         if test_frame.empty:
             continue
 
+        preprocessing_fit_frame = train_frame.copy()
         if preprocessing_spec is not None:
-            preprocessor = FoldSafePreprocessor(preprocessing_spec, feature_columns).fit(train_frame)
+            preprocessor = FoldSafePreprocessor(preprocessing_spec, feature_columns).fit(preprocessing_fit_frame)
             train_frame = preprocessor.transform(train_frame)
             valid_frame = preprocessor.transform(valid_frame)
             test_frame = preprocessor.transform(test_frame)
@@ -154,7 +220,10 @@ def generate_oof_predictions(
                 tuned_spec = ModelRunSpec(name=spec.name, params=tuned_params, seed=spec.seed, n_trials=spec.n_trials)
                 model = _instantiate_model(tuned_spec)
 
-            fit_frame = pd.concat([train_frame, valid_frame], ignore_index=True)
+            if evaluation_protocol == "train_valid_refit_then_test":
+                fit_frame = pd.concat([train_frame, valid_frame], ignore_index=True)
+            else:
+                fit_frame = train_frame.copy()
             model.fit(fit_frame, feature_columns, label_column)
             preds = pd.DataFrame(
                 {
@@ -170,6 +239,17 @@ def generate_oof_predictions(
             )
             preds = _rank_and_bucket(preds)
             prediction_rows.append(preds)
+            data_usage_rows.append(
+                _build_data_usage_row(
+                    fold_id=fold.fold_id,
+                    model_name=spec.name,
+                    protocol=evaluation_protocol,
+                    preprocessing_fit_frame=preprocessing_fit_frame,
+                    tuning_frame=valid_frame,
+                    final_fit_frame=fit_frame,
+                    predict_frame=test_frame,
+                )
+            )
 
     if prediction_rows:
         predictions = pd.concat(prediction_rows, ignore_index=True)
@@ -177,12 +257,11 @@ def generate_oof_predictions(
         predictions = pd.DataFrame(columns=["date", "security_id", "fold_id", "model_name", "raw_prediction", "rank_prediction", "bucket_prediction", "prediction_timestamp", "dataset_version"])
 
     predictions = validate_dataframe(predictions, "oof_predictions")
-    duplicates = predictions.duplicated(subset=["date", "security_id", "model_name"], keep=False)
-    if duplicates.any():
-        raise ValueError("OOF predictions must be unique by date, security_id, and model_name.")
+    _assert_oof_purity(predictions, folds)
 
     coverage_by_fold = _build_coverage_by_fold(predictions)
     tuning_diagnostics = pd.DataFrame(tuning_rows)
+    data_usage_trace = pd.DataFrame(data_usage_rows)
     manifest = {
         "dataset_version": dataset_version,
         "prediction_timestamp": str(prediction_ts),
@@ -191,5 +270,20 @@ def generate_oof_predictions(
         "models": [spec.name for spec in model_specs],
         "oof_only_guard": True,
         "config_hash": config_hash,
+        "evaluation_protocol": evaluation_protocol,
+        "data_usage_trace_rows": int(len(data_usage_trace)),
+        "oof_purity_checks": {
+            "unique_prediction_rows": True,
+            "test_only_predictions": True,
+            "preprocessing_fit_scope": "train_only",
+            "tuning_scope": "valid_only",
+            "final_fit_scope": "train_plus_valid" if evaluation_protocol == "train_valid_refit_then_test" else "train_only",
+        },
     }
-    return OOFRunResult(predictions=predictions, coverage_by_fold=coverage_by_fold, tuning_diagnostics=tuning_diagnostics, manifest=manifest)
+    return OOFRunResult(
+        predictions=predictions,
+        coverage_by_fold=coverage_by_fold,
+        tuning_diagnostics=tuning_diagnostics,
+        data_usage_trace=data_usage_trace,
+        manifest=manifest,
+    )

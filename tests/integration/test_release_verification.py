@@ -36,6 +36,7 @@ def _build_release_fixture(root: Path) -> Path:
 
     dataset_manifest = _write_json(manifests_dir / "dataset_manifest.json", {"status": "ok"})
     oof_manifest = _write_json(manifests_dir / "oof_manifest.json", {"status": "ok"})
+    evaluation_manifest = _write_json(manifests_dir / "evaluation_manifest.json", {"status": "ok"})
     backtest_manifest = _write_json(manifests_dir / "backtest_manifest.json", {"status": "ok"})
     capacity_manifest = _write_json(manifests_dir / "capacity_manifest.json", {"status": "ok"})
 
@@ -74,6 +75,7 @@ def _build_release_fixture(root: Path) -> Path:
             "required_manifests": {
                 "dataset_manifest": str(dataset_manifest.relative_to(root)),
                 "oof_manifest": str(oof_manifest.relative_to(root)),
+                "evaluation_manifest": str(evaluation_manifest.relative_to(root)),
                 "backtest_manifest": str(backtest_manifest.relative_to(root)),
                 "capacity_manifest": str(capacity_manifest.relative_to(root)),
                 "pipeline_run_manifest": str(pipeline_manifest.relative_to(root)),
@@ -87,7 +89,10 @@ def _build_release_fixture(root: Path) -> Path:
             },
             "key_metrics": {"primary_model_name": "gradient_boosting_ranker"},
             "pending_outputs": [],
-            "temporary_simplifications": ["synthetic vendor stub"],
+            "temporary_simplifications": [],
+            "runtime_class": "ReleaseCandidateRuntime",
+            "capability_class": "release_candidate",
+            "release_eligible": True,
         },
     )
     return review_bundle
@@ -97,7 +102,7 @@ def test_verify_release_bundle_accepts_complete_bundle(tmp_path: Path) -> None:
     review_bundle_path = _build_release_fixture(tmp_path)
     result = verify_release_bundle(tmp_path, review_bundle_path)
     assert result.ok is True
-    assert result.manifest_count == 5
+    assert result.manifest_count == 6
     assert result.report_count == 2
     assert result.section_count == 1
     assert result.figure_count == 1
@@ -132,3 +137,14 @@ def test_release_verifier_script_reports_success(repo_root: Path, tmp_path: Path
     payload = json.loads(completed.stdout)
     assert payload["status"] == "ok"
     assert payload["figure_count"] == 1
+
+
+def test_verify_release_bundle_rejects_non_release_eligible_review_bundle(tmp_path: Path) -> None:
+    review_bundle_path = _build_release_fixture(tmp_path)
+    payload = json.loads(review_bundle_path.read_text(encoding="utf-8"))
+    payload["release_eligible"] = False
+    payload["capability_class"] = "fixture_only"
+    payload["runtime_class"] = "FixtureResearchRuntime"
+    review_bundle_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    with pytest.raises(ReleaseVerificationError, match="non-release-eligible"):
+        verify_release_bundle(tmp_path, review_bundle_path)

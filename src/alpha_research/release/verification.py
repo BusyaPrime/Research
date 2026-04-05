@@ -17,6 +17,9 @@ REQUIRED_REVIEW_FIELDS = (
     "key_metrics",
     "pending_outputs",
     "temporary_simplifications",
+    "runtime_class",
+    "capability_class",
+    "release_eligible",
 )
 
 
@@ -86,6 +89,7 @@ def verify_release_bundle(root: Path, review_bundle_path: Path | None = None) ->
     required_reports = review_bundle["required_reports"]
     section_paths = review_bundle["report_section_paths"]
     pending_outputs = review_bundle["pending_outputs"]
+    temporary_simplifications = review_bundle["temporary_simplifications"]
 
     for name, relative_path in required_manifests.items():
         _require_file(root, str(relative_path), label=f"manifest:{name}")
@@ -109,8 +113,18 @@ def verify_release_bundle(root: Path, review_bundle_path: Path | None = None) ->
 
     if pending_outputs:
         raise ReleaseVerificationError(f"В review bundle остались незакрытые pending outputs: {pending_outputs}")
+    if temporary_simplifications:
+        raise ReleaseVerificationError(
+            "Release-grade verifier не принимает run с временными упрощениями: "
+            f"{temporary_simplifications}"
+        )
+    if not bool(review_bundle["release_eligible"]):
+        raise ReleaseVerificationError(
+            "Review bundle помечен как non-release-eligible. "
+            f"capability_class={review_bundle['capability_class']}, runtime_class={review_bundle['runtime_class']}."
+        )
 
-    notes.append(f"temporary_simplifications={len(review_bundle['temporary_simplifications'])}")
+    notes.append(f"temporary_simplifications={len(temporary_simplifications)}")
     notes.append(f"artifacts={len(manifest_payload.get('artifacts', []))}")
     return ReleaseVerificationResult(
         ok=True,

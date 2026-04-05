@@ -36,6 +36,13 @@ from alpha_research.features.registry import feature_names_by_family, load_featu
 from alpha_research.labels.engine import build_label_panel
 from alpha_research.pipeline.bundle_loader import resolve_operational_bundle
 from alpha_research.pipeline.fixture_data import SyntheticResearchBundle
+from alpha_research.pipeline.policy import (
+    IncompleteOperationalOutputs,
+    RuntimeCapability,
+    TemporarySimplificationViolation,
+    UnsupportedExperimentForOperationalRun,
+    resolve_runtime_capability,
+)
 from alpha_research.preprocessing.transforms import PreprocessingSpec
 from alpha_research.splits.engine import generate_walk_forward_splits, persist_fold_metadata
 from alpha_research.testing.leakage import assert_no_future_feature_timestamps
@@ -95,6 +102,8 @@ class OperationalRunResult:
     primary_artifact_path: Path
     command: str
     dataset_version: str
+    capability_class: str
+    release_eligible: bool
     notes: list[str]
 
 
@@ -143,42 +152,20 @@ def _persist_json_artifact(
     )
 
 
-def _select_experiment(loaded: LoadedConfigBundle) -> tuple[ExperimentConfig, list[str]]:
-    notes: list[str] = []
-    supported = [experiment for experiment in loaded.bundle.experiments.values() if experiment.model.name in SUPPORTED_MODEL_NAMES]
-    unsupported = [experiment for experiment in loaded.bundle.experiments.values() if experiment.model.name not in SUPPORTED_MODEL_NAMES]
-    if unsupported:
-        names = ", ".join(sorted(experiment.model.name for experiment in unsupported))
-        notes.append(
-            "TEMPORARY SIMPLIFICATION: в operational run пропущены неподдерживаемые модели "
-            f"до подключения advanced ranker adapters ({names})."
+def _select_experiment(loaded: LoadedConfigBundle) -> ExperimentConfig:
+    experiment_key = loaded.bundle.runtime.operational_experiment_key
+    if experiment_key not in loaded.bundle.experiments:
+        raise KeyError(f"В runtime config указан неизвестный operational_experiment_key: {experiment_key}")
+    experiment = loaded.bundle.experiments[experiment_key]
+    if (
+        loaded.bundle.runtime.policy.enforce_supported_operational_experiment
+        and experiment.model.name not in SUPPORTED_MODEL_NAMES
+    ):
+        raise UnsupportedExperimentForOperationalRun(
+            "Operational run не будет молча деградировать до baseline: "
+            f"experiment `{experiment_key}` использует неподдерживаемую модель `{experiment.model.name}`."
         )
-    if supported:
-        priority = {
-            "gradient_boosting_ranker": 0,
-            "gradient_boosting_regressor": 1,
-            "ridge_regression": 2,
-            "lasso_regression": 3,
-            "heuristic_blend_score": 4,
-            "heuristic_momentum_score": 5,
-            "heuristic_reversal_score": 6,
-            "random_score": 7,
-        }
-        ordered = sorted(supported, key=lambda experiment: (priority.get(experiment.model.name, 999), experiment.experiment_name))
-        return ordered[0], notes
-
-    fallback = ExperimentConfig(
-        experiment_name="fallback_ridge_baseline",
-        dataset_version="gold_latest",
-        label=loaded.bundle.labels.primary_label,
-        featureset="all_minus_interactions",
-        preprocessing={"winsor": "p0_5_p99_5", "scaler": "zscore_by_date", "neutralizer": "sector_plus_beta"},
-        model={"name": "ridge_regression", "alpha_grid": [0.1, 1.0, 10.0]},
-        portfolio={"mode": loaded.bundle.portfolio.mode},
-        cost_scenario="base",
-    )
-    notes.append("TEMPORARY SIMPLIFICATION: не найден поддерживаемый experiment config, использован fallback ridge baseline.")
-    return fallback, notes
+    return experiment
 
 
 def _resolve_preprocessing_spec(loaded: LoadedConfigBundle, experiment: ExperimentConfig) -> PreprocessingSpec:
@@ -329,6 +316,15 @@ def _next_steps_for_source_mode(source_mode: str) -> list[str]:
     ]
 
 
+def _release_eligibility(
+    capability: RuntimeCapability,
+    *,
+    pending_formats: list[str],
+    temporary_simplifications: list[str],
+) -> bool:
+    return capability.allows_release_bundle and not pending_formats and not temporary_simplifications
+
+
 def execute_operational_command(
     command_name: str,
     paths: RepositoryPaths,
@@ -342,6 +338,8 @@ def execute_operational_command(
     bundle_start_date: str | None = None,
     bundle_end_date: str | None = None,
     bundle_n_securities: int | None = None,
+    ablation_max_feature_family_scenarios: int | None = None,
+    ablation_max_preprocessing_scenarios: int | None = None,
 ) -> OperationalRunResult:
     if command_name not in OPERATIONAL_COMMANDS:
         raise KeyError(f"Unsupported operational command: {command_name}")
@@ -358,6 +356,7 @@ def execute_operational_command(
         directory.mkdir(parents=True, exist_ok=True)
     report_sections_dir.mkdir(parents=True, exist_ok=True)
 
+    experiment = _select_experiment(loaded)
     bundle = resolve_operational_bundle(
         paths,
         loaded,
@@ -366,9 +365,15 @@ def execute_operational_command(
         end_date=bundle_end_date,
         n_securities=bundle_n_securities,
     )
+    runtime_metadata = capture_runtime_metadata(paths.root)
+    capability = resolve_runtime_capability(
+        loaded,
+        synthetic_bundle_active=synthetic_bundle is not None or loaded.bundle.runtime.ingest.provider_mode == "synthetic_vendor_stub",
+        command_name=command_name,
+    )
     source_mode = _source_mode_label(loaded, synthetic_bundle)
-    experiment, experiment_notes = _select_experiment(loaded)
-    notes = [*bundle.notes, *experiment_notes]
+    notes = [*bundle.notes]
+    temporary_simplifications: list[str] = []
     next_steps = _next_steps_for_source_mode(source_mode)
     active_split_config = split_config or loaded.bundle.splits
     active_capacity_config = capacity_config or loaded.bundle.capacity
@@ -527,6 +532,7 @@ def execute_operational_command(
         dataset_version=experiment.dataset_version,
         config_hash=loaded.config_hash,
         preprocessing_spec=preprocessing_spec,
+        evaluation_protocol=loaded.bundle.runtime.evaluation_protocol,
     )
     artifacts.append(
         _persist_frame(paths.root, dataset_dir / "oof_predictions.parquet", "oof_predictions", oof.predictions)
@@ -538,7 +544,21 @@ def execute_operational_command(
         _persist_frame(paths.root, diagnostics_dir / "tuning_diagnostics.parquet", "tuning_diagnostics", oof.tuning_diagnostics)
     )
     artifacts.append(
+        _persist_frame(paths.root, diagnostics_dir / "evaluation_data_usage_trace.parquet", "evaluation_data_usage_trace", oof.data_usage_trace)
+    )
+    artifacts.append(
         _persist_json_artifact(paths.root, manifests_dir / "oof_manifest.json", "oof_manifest", oof.manifest)
+    )
+    evaluation_manifest = {
+        "evaluation_protocol": loaded.bundle.runtime.evaluation_protocol,
+        "fold_count": int(len(splits.folds)),
+        "data_usage_trace_path": str((diagnostics_dir / "evaluation_data_usage_trace.parquet").relative_to(paths.root)),
+        "oof_manifest_path": str((manifests_dir / "oof_manifest.json").relative_to(paths.root)),
+        "split_protocol": splits.protocol.to_dict(),
+        "oof_purity_checks": oof.manifest["oof_purity_checks"],
+    }
+    artifacts.append(
+        _persist_json_artifact(paths.root, manifests_dir / "evaluation_manifest.json", "evaluation_manifest", evaluation_manifest)
     )
     if not oof.tuning_diagnostics.empty:
         for model_name, tuning_frame in oof.tuning_diagnostics.groupby("model_name", sort=False):
@@ -713,6 +733,8 @@ def execute_operational_command(
         calendar=bundle.calendar,
         scenario=experiment.cost_scenario,
         root=str(paths.root),
+        max_feature_family_scenarios=ablation_max_feature_family_scenarios,
+        max_preprocessing_scenarios=ablation_max_preprocessing_scenarios,
     )
     artifacts.append(
         _persist_frame(paths.root, diagnostics_dir / "predictive_metrics.parquet", "predictive_metrics", predictive_metrics)
@@ -761,11 +783,22 @@ def execute_operational_command(
                 f"- config_hash: {loaded.config_hash}",
                 f"- git_commit_hash: {capture_runtime_metadata(paths.root).git_commit_hash}",
                 f"- source_mode: {source_mode}",
+                f"- runtime_class: {capability.runtime_class}",
+                f"- capability_class: {capability.capability_class}",
                 f"- benchmark_mode: {'equal_weight_proxy_from_market_panel' if source_mode == 'configured_adapters' else 'synthetic_fixture_bundle'}",
             ]
         ),
         "feature_catalog": _feature_catalog_summary(feature_columns, paths.root),
         "validation_protocol": "\n".join([f"- fold_count: {len(splits.folds)}", f"- fold_metadata: {fold_metadata_path.relative_to(paths.root)}", splits.timeline_plot]),
+        "evaluation_protocol": "\n".join(
+            [
+                f"- protocol: {loaded.bundle.runtime.evaluation_protocol}",
+                "- preprocessing_fit_scope: train_only",
+                "- tuning_scope: valid_only",
+                f"- final_fit_scope: {'train_plus_valid' if loaded.bundle.runtime.evaluation_protocol == 'train_valid_refit_then_test' else 'train_only'}",
+                "- predict_scope: test_only",
+            ]
+        ),
         "model_comparison": "\n".join(_summary_lines_from_metrics(model_comparison)),
         "backtest_results": "\n".join(
             [
@@ -862,6 +895,11 @@ def execute_operational_command(
     for fmt in loaded.bundle.reporting.formats:
         if fmt not in generated_formats:
             pending_formats.append(fmt)
+    if pending_formats and loaded.bundle.runtime.policy.release_requires_zero_pending_outputs:
+        raise IncompleteOperationalOutputs(
+            "Reporting path не собрал все requested formats: "
+            f"{', '.join(pending_formats)}."
+        )
 
     rendered_figures = render_mandatory_figures(
         report_dir / "figures",
@@ -903,18 +941,32 @@ def execute_operational_command(
         StageArtifact(name="report_bundle", path=str(report_bundle_path.relative_to(paths.root)), format="json")
     )
 
+    if temporary_simplifications and not loaded.bundle.runtime.policy.allow_temporary_simplifications:
+        raise TemporarySimplificationViolation(
+            "Strict operational policy запрещает completed-run с временными упрощениями: "
+            f"{temporary_simplifications}"
+        )
+
+    release_eligible = _release_eligibility(
+        capability,
+        pending_formats=pending_formats,
+        temporary_simplifications=temporary_simplifications,
+    )
     completed_at = _now_utc()
     manifest = PipelineRunManifest(
         run_id=run_id,
         command=command_name,
-        status="completed",
+        status="completed" if release_eligible else "completed_fixture_only",
         dataset_version=experiment.dataset_version,
         config_hash=loaded.config_hash,
-        runtime_metadata=capture_runtime_metadata(paths.root),
+        runtime_metadata=runtime_metadata,
         started_at_utc=_isoformat(started_at),
         completed_at_utc=_isoformat(completed_at),
         artifacts=artifacts,
         notes=notes,
+        runtime_class=capability.runtime_class,
+        capability_class=capability.capability_class,
+        release_eligible=release_eligible,
     )
     manifest_path = write_model_document(manifest, manifests_dir / "pipeline_run_manifest.json")
 
@@ -928,6 +980,7 @@ def execute_operational_command(
         required_manifests={
             "dataset_manifest": str((manifests_dir / "dataset_manifest.json").relative_to(paths.root)),
             "oof_manifest": str((manifests_dir / "oof_manifest.json").relative_to(paths.root)),
+            "evaluation_manifest": str((manifests_dir / "evaluation_manifest.json").relative_to(paths.root)),
             "backtest_manifest": str((manifests_dir / "backtest_manifest.json").relative_to(paths.root)),
             "capacity_manifest": str((manifests_dir / "capacity_manifest.json").relative_to(paths.root)),
             "pipeline_run_manifest": str(manifest_path.relative_to(paths.root)),
@@ -950,7 +1003,10 @@ def execute_operational_command(
             "ablation_rows": int(len(ablation.results)),
         },
         pending_outputs=pending_formats,
-        temporary_simplifications=notes,
+        temporary_simplifications=temporary_simplifications,
+        runtime_class=capability.runtime_class,
+        capability_class=capability.capability_class,
+        release_eligible=release_eligible,
     )
     review_bundle_path = write_model_document(review_bundle, manifests_dir / "review_bundle.json")
 
@@ -966,5 +1022,7 @@ def execute_operational_command(
         primary_artifact_path=paths.root / primary_artifact_path,
         command=command_name,
         dataset_version=experiment.dataset_version,
+        capability_class=capability.capability_class,
+        release_eligible=release_eligible,
         notes=notes,
     )

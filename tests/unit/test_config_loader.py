@@ -16,6 +16,8 @@ def test_load_resolved_config_bundle(repo_root: Path) -> None:
     loaded = load_resolved_config_bundle(repo_root)
     assert loaded.bundle.project.project_code == "ARP-US-Daily-CS-01"
     assert len(loaded.bundle.experiments) == 4
+    assert loaded.bundle.runtime.operational_experiment_key == "exp_gbm_ranker"
+    assert loaded.bundle.runtime.policy.strict_operational is True
 
 
 def test_config_hash_changes_when_config_changes(repo_copy: Path) -> None:

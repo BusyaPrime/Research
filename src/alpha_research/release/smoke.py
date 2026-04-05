@@ -51,6 +51,7 @@ def _build_smoke_loaded(loaded: LoadedConfigBundle) -> LoadedConfigBundle:
         runtime_bundle = runtime_bundle.model_copy(
             update={"ingest": runtime_bundle.ingest.model_copy(update={"symbol_allowlist": list(smoke.preferred_symbols)})}
         )
+    runtime_bundle = runtime_bundle.model_copy(update={"operational_experiment_key": smoke.experiment_key})
     smoke_bundle = loaded.bundle.model_copy(update={"experiments": {smoke.experiment_key: smoke_experiment}, "runtime": runtime_bundle})
     return replace(loaded, bundle=smoke_bundle, config_hash=hash_mapping(smoke_bundle.model_dump(mode="json")))
 
@@ -125,6 +126,8 @@ def run_release_smoke(
             bundle_start_date=smoke.start_date,
             bundle_end_date=smoke.end_date,
             bundle_n_securities=smoke.n_securities,
+            ablation_max_feature_family_scenarios=smoke.ablation_max_feature_family_scenarios,
+            ablation_max_preprocessing_scenarios=smoke.ablation_max_preprocessing_scenarios,
         )
         verification = verify_release_bundle(paths.root, operational.review_bundle_path)
 

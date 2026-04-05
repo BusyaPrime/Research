@@ -51,6 +51,9 @@ class PipelineRunManifest(BaseModel):
     completed_at_utc: str
     artifacts: list[StageArtifact] = Field(default_factory=list)
     notes: list[str] = Field(default_factory=list)
+    runtime_class: str | None = None
+    capability_class: str | None = None
+    release_eligible: bool = False
 
 
 class ReportSectionArtifact(BaseModel):
@@ -93,6 +96,9 @@ class ReviewBundle(BaseModel):
     key_metrics: dict[str, float | int | str | None]
     pending_outputs: list[str] = Field(default_factory=list)
     temporary_simplifications: list[str] = Field(default_factory=list)
+    runtime_class: str | None = None
+    capability_class: str | None = None
+    release_eligible: bool = False
 
 
 def write_json_document(payload: Any, path: Path) -> Path:

@@ -7,6 +7,7 @@ include_sections:
 - data_lineage
 - feature_catalog
 - validation_protocol
+- evaluation_protocol
 - model_comparison
 - backtest_results
 - cost_sensitivity

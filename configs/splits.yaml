@@ -8,3 +8,4 @@ embargo_days: 5
 nested_validation: true
 min_train_observations: 100000
 persist_fold_artifacts: true
+allow_small_fixture_splits: false

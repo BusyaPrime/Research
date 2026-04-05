@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pandas as pd
+import pytest
 
 from alpha_research.common.io import read_json
 from alpha_research.config.models import SplitsConfig
@@ -74,3 +75,27 @@ def test_validation_protocol_report_contains_timeline_plot() -> None:
     artifacts = generate_walk_forward_splits(bundle.panel, _split_config(), bundle.calendar, primary_horizon_days=5)
     assert "fold_timeline" in artifacts.timeline_plot
     assert artifacts.folds[0].fold_id in artifacts.timeline_plot
+
+
+def test_split_artifacts_persist_protocol_and_role_matrix(tmp_path) -> None:
+    bundle = build_model_research_bundle()
+    artifacts = generate_walk_forward_splits(bundle.panel, _split_config(), bundle.calendar, primary_horizon_days=5)
+    payload = read_json(persist_fold_metadata(artifacts, tmp_path / "folds" / "metadata.json"))
+    assert payload["protocol"]["checks"]["no_overlap"] is True
+    assert payload["role_matrix"]
+
+
+def test_strict_split_policy_rejects_too_small_fold() -> None:
+    bundle = build_model_research_bundle()
+    config = _split_config()
+    config = config.model_copy(update={"min_train_observations": 10_000, "allow_small_fixture_splits": False})
+    with pytest.raises(ValueError, match="Strict split policy"):
+        generate_walk_forward_splits(bundle.panel, config, bundle.calendar, primary_horizon_days=5)
+
+
+def test_fixture_split_override_allows_small_fold_only_when_explicit() -> None:
+    bundle = build_model_research_bundle()
+    config = _split_config()
+    config = config.model_copy(update={"min_train_observations": 10_000, "allow_small_fixture_splits": True})
+    artifacts = generate_walk_forward_splits(bundle.panel, config, bundle.calendar, primary_horizon_days=5)
+    assert artifacts.protocol.allow_small_fixture_splits is True

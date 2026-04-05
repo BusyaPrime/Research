@@ -235,6 +235,18 @@ def test_run_report_builds_release_bundle_and_stable_regression_fixture(workspac
                 "folds": [fold],
                 "metadata": fold_metadata.copy(),
                 "timeline_plot": "fold_timeline\nfold_000: stub",
+                "protocol": type(
+                    "ProtocolStub",
+                    (),
+                    {"to_dict": lambda self: {"fold_count": 1, "checks": {"no_overlap": True}}},
+                )(),
+                "role_matrix": pd.DataFrame(
+                    [
+                        {"fold_id": "fold_000", "date": dates[0], "role": "train"},
+                        {"fold_id": "fold_000", "date": dates[2], "role": "valid"},
+                        {"fold_id": "fold_000", "date": dates[4], "role": "test"},
+                    ]
+                ),
             },
         )(),
     )
@@ -247,7 +259,24 @@ def test_run_report_builds_release_bundle_and_stable_regression_fixture(workspac
                 "predictions": predictions.copy(),
                 "coverage_by_fold": pd.DataFrame([{"fold_id": "fold_000", "model_name": "gradient_boosting_ranker", "row_count": len(predictions), "unique_dates": 2}]),
                 "tuning_diagnostics": pd.DataFrame([{"model_name": "gradient_boosting_ranker", "n_estimators": 12, "learning_rate": 0.1, "max_bins": 8, "min_leaf_size": 12, "validation_rank_ic_mean": 0.2}]),
-                "manifest": {"dataset_version": "gold_latest", "row_count": len(predictions), "models": ["gradient_boosting_ranker"]},
+                "data_usage_trace": pd.DataFrame(
+                    [
+                        {
+                            "fold_id": "fold_000",
+                            "model_name": "gradient_boosting_ranker",
+                            "protocol": "train_valid_refit_then_test",
+                            "preprocessing_fit_scope": "train_only",
+                            "final_fit_scope": "train_plus_valid",
+                            "predict_scope": "test_only",
+                        }
+                    ]
+                ),
+                "manifest": {
+                    "dataset_version": "gold_latest",
+                    "row_count": len(predictions),
+                    "models": ["gradient_boosting_ranker"],
+                    "oof_purity_checks": {"unique_prediction_rows": True, "test_only_predictions": True},
+                },
             },
         )(),
     )
@@ -329,7 +358,9 @@ def test_run_report_builds_release_bundle_and_stable_regression_fixture(workspac
     assert (workspace_repo_copy / "docs" / "release_checklist.md").exists()
     assert review_bundle["required_manifests"]
     assert review_bundle["required_reports"]
-    assert review_bundle["temporary_simplifications"]
+    assert review_bundle["temporary_simplifications"] == []
+    assert review_bundle["capability_class"] == "fixture_only"
+    assert review_bundle["release_eligible"] is False
 
     for relative_path in review_bundle["required_manifests"].values():
         assert (workspace_repo_copy / relative_path).exists()
@@ -340,6 +371,9 @@ def test_run_report_builds_release_bundle_and_stable_regression_fixture(workspac
         assert (workspace_repo_copy / relative_path).exists()
 
     assert manifest["dataset_version"] == "gold_latest"
+    assert manifest["status"] == "completed_fixture_only"
+    assert manifest["capability_class"] == "fixture_only"
+    assert manifest["release_eligible"] is False
     assert review_bundle["report_html_path"]
     assert review_bundle["report_bundle_path"]
     assert review_bundle["key_metrics"]["primary_model_name"] == "gradient_boosting_ranker"

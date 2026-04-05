@@ -37,6 +37,8 @@ def test_release_smoke_runs_operational_path_and_writes_summary(minimal_repo, mo
             primary_artifact_path=primary_artifact_path,
             command=command_name,
             dataset_version="gold_latest",
+            capability_class="release_candidate",
+            release_eligible=True,
             notes=["smoke"],
         )
 

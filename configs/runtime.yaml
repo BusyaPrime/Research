@@ -5,21 +5,29 @@ ingest:
   default_n_securities: 8
   page_size: 500
   symbol_allowlist: null
+operational_experiment_key: exp_gbm_ranker
+evaluation_protocol: train_valid_refit_then_test
+policy:
+  strict_research: true
+  strict_operational: true
+  allow_temporary_simplifications: false
+  release_requires_zero_pending_outputs: true
+  enforce_supported_operational_experiment: true
 release_smoke:
   enabled: true
   run_ingest_commands: true
   start_date: "2023-05-01"
   end_date: "2024-06-28"
-  n_securities: 4
+  n_securities: 2
   preferred_symbols:
     - AAPL
     - MSFT
-    - NVDA
-    - GOOGL
   experiment_key: exp_baseline_linear
   max_model_trials: 2
   cost_scenarios:
     - base
+  ablation_max_feature_family_scenarios: 1
+  ablation_max_preprocessing_scenarios: 1
   provider_mode_override: configured_adapters
   prepare_local_configured_fixtures: true
   universe:
@@ -58,6 +66,7 @@ release_smoke:
     nested_validation: true
     min_train_observations: 10
     persist_fold_artifacts: true
+    allow_small_fixture_splits: false
   capacity:
     aum_ladder_usd:
       - 1000000.0

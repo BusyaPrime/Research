@@ -202,41 +202,41 @@ def run_ablation_suite(
     calendar: ExchangeCalendarAdapter,
     scenario: str,
     root: str,
+    max_feature_family_scenarios: int | None = None,
+    max_preprocessing_scenarios: int | None = None,
 ) -> AblationRunResult:
     rows: list[dict[str, object]] = []
+    evaluation_cache: dict[tuple[tuple[str, ...], float | None, float | None, str | None, str | None], dict[str, object]] = {}
 
-    for scenario_name, scenario_features in _feature_family_scenarios(feature_columns, root):
-        rows.append(
-            _evaluate_scenario(
-                scenario_group="feature_family",
+    feature_family_scenarios = _feature_family_scenarios(feature_columns, root)
+    preprocessing_scenarios = _preprocessing_scenarios(preprocessing_spec)
+    if max_feature_family_scenarios is not None:
+        feature_family_scenarios = feature_family_scenarios[: max(max_feature_family_scenarios, 1)]
+    if max_preprocessing_scenarios is not None:
+        preprocessing_scenarios = preprocessing_scenarios[: max(max_preprocessing_scenarios, 1)]
+
+    def _evaluate_cached(
+        *,
+        scenario_group: str,
+        scenario_name: str,
+        scenario_features: list[str],
+        scenario_preprocessing: PreprocessingSpec,
+    ) -> dict[str, object]:
+        cache_key = (
+            tuple(scenario_features),
+            scenario_preprocessing.winsor_lower,
+            scenario_preprocessing.winsor_upper,
+            scenario_preprocessing.scaler,
+            scenario_preprocessing.neutralizer,
+        )
+        if cache_key not in evaluation_cache:
+            evaluation_cache[cache_key] = _evaluate_scenario(
+                scenario_group=scenario_group,
                 scenario_name=scenario_name,
                 panel=panel,
                 folds=folds,
                 model_spec=model_spec,
                 feature_columns=scenario_features,
-                label_column=label_column,
-                dataset_version=dataset_version,
-                config_hash=config_hash,
-                preprocessing_spec=preprocessing_spec,
-                universe_snapshot=universe_snapshot,
-                feature_panel=feature_panel,
-                silver_market=silver_market,
-                portfolio_config=portfolio_config,
-                costs_config=costs_config,
-                calendar=calendar,
-                scenario=scenario,
-            )
-        )
-
-    for scenario_name, scenario_preprocessing in _preprocessing_scenarios(preprocessing_spec):
-        rows.append(
-            _evaluate_scenario(
-                scenario_group="preprocessing",
-                scenario_name=scenario_name,
-                panel=panel,
-                folds=folds,
-                model_spec=model_spec,
-                feature_columns=feature_columns,
                 label_column=label_column,
                 dataset_version=dataset_version,
                 config_hash=config_hash,
@@ -248,6 +248,30 @@ def run_ablation_suite(
                 costs_config=costs_config,
                 calendar=calendar,
                 scenario=scenario,
+            )
+        return {
+            **evaluation_cache[cache_key],
+            "scenario_group": scenario_group,
+            "scenario_name": scenario_name,
+        }
+
+    for scenario_name, scenario_features in feature_family_scenarios:
+        rows.append(
+            _evaluate_cached(
+                scenario_group="feature_family",
+                scenario_name=scenario_name,
+                scenario_features=scenario_features,
+                scenario_preprocessing=preprocessing_spec,
+            )
+        )
+
+    for scenario_name, scenario_preprocessing in preprocessing_scenarios:
+        rows.append(
+            _evaluate_cached(
+                scenario_group="preprocessing",
+                scenario_name=scenario_name,
+                scenario_features=feature_columns,
+                scenario_preprocessing=scenario_preprocessing,
             )
         )
 
