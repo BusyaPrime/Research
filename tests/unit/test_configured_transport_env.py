@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from alpha_research.config.models import AdapterConfig
 from alpha_research.data.providers.configured_transport import (
+    ConfiguredAdapterPermanentError,
     adapter_environment_diagnostics,
     provider_headers,
     resolve_env,
+    resolve_local_path,
 )
 
 
@@ -46,3 +48,42 @@ def test_provider_headers_uses_default_user_agent_when_env_missing(monkeypatch) 
     )
 
     assert provider_headers(adapter)["User-Agent"] == "Mozilla/5.0"
+
+
+def test_resolve_local_path_error_names_missing_env(tmp_path, monkeypatch) -> None:
+    monkeypatch.delenv("ALPHA_RESEARCH_LOCAL_PATH", raising=False)
+    adapter = AdapterConfig(
+        adapter_name="local_fixture_adapter",
+        adapter_type="local_file_market_daily",
+        local_path_env="ALPHA_RESEARCH_LOCAL_PATH",
+    )
+
+    try:
+        resolve_local_path(adapter, tmp_path)
+    except ConfiguredAdapterPermanentError as exc:
+        message = str(exc)
+    else:
+        raise AssertionError("Expected missing local path to raise a permanent adapter error")
+
+    assert "local_fixture_adapter" in message
+    assert "ALPHA_RESEARCH_LOCAL_PATH" in message
+    assert "local_path_env_present" in message
+
+
+def test_resolve_local_path_error_names_missing_file_source(tmp_path) -> None:
+    adapter = AdapterConfig(
+        adapter_name="missing_file_adapter",
+        adapter_type="local_file_market_daily",
+        local_path="fixtures/missing.csv",
+    )
+
+    try:
+        resolve_local_path(adapter, tmp_path)
+    except ConfiguredAdapterPermanentError as exc:
+        message = str(exc)
+    else:
+        raise AssertionError("Expected missing fixture file to raise a permanent adapter error")
+
+    assert "missing_file_adapter" in message
+    assert "fixtures" in message
+    assert "source=local_path" in message
