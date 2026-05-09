@@ -116,3 +116,4 @@ python .\scripts\run_release_smoke.py --root . --mode live-public
 Для локального воспроизводимого прогона есть отдельный runbook: `docs/runbooks/reproducible_local_runbook.md`.
 Для отдельного тяжелого smoke-прогона есть workflow `.github/workflows/release_smoke.yml`.
 Для честной сверки реализации со спецификацией есть `docs/status/spec_coverage_map.yaml` и `docs/status/spec_gap_audit.md`.
+Quality gates и локальные эквиваленты CI описаны в `docs/status/quality_gates.md`.
