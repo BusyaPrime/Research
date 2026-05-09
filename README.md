@@ -116,3 +116,13 @@ python .\scripts\run_release_smoke.py --root . --mode live-public
 Для локального воспроизводимого прогона есть отдельный runbook: `docs/runbooks/reproducible_local_runbook.md`.
 Для отдельного тяжелого smoke-прогона есть workflow `.github/workflows/release_smoke.yml`.
 Для честной сверки реализации со спецификацией есть `docs/status/spec_coverage_map.yaml` и `docs/status/spec_gap_audit.md`.
+
+## Developer docs
+
+- `docs/development/onboarding.md` — быстрый путь от clone до reviewable local run.
+- `docs/development/local_setup.md` — установка и editable/dev режим.
+- `docs/development/commands.md` — Makefile, CLI и quality gate команды.
+- `docs/development/environment.md` — безопасная работа с env и adapter variables.
+- `docs/development/troubleshooting.md` — типовые локальные сбои и диагностика.
+- `docs/development/project_structure.md` — ответственность ключевых папок.
+- `docs/development/contribution_workflow.md` — branch, commit и PR workflow.
