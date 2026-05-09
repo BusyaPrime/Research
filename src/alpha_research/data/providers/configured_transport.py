@@ -96,14 +96,20 @@ def adapter_environment_diagnostics(adapter: AdapterConfig) -> AdapterEnvironmen
 def resolve_local_path(adapter: AdapterConfig, root: Path) -> Path:
     local_path = adapter.local_path or resolve_env(adapter.local_path_env)
     if not local_path:
+        diagnostics = adapter_environment_diagnostics(adapter)
         raise ConfiguredAdapterPermanentError(
-            f"Для adapter `{adapter.adapter_name}` не указан local_path и не задан env `{adapter.local_path_env}`."
+            f"Для adapter `{adapter.adapter_name}` не указан local_path и не задан env `{adapter.local_path_env}`. "
+            f"diagnostics={diagnostics.as_dict()}"
         )
     candidate = Path(local_path)
     if not candidate.is_absolute():
         candidate = (root / candidate).resolve()
     if not candidate.exists():
-        raise ConfiguredAdapterPermanentError(f"Локальный файл для adapter `{adapter.adapter_name}` не найден: {candidate}")
+        source = "local_path" if adapter.local_path else f"env `{adapter.local_path_env}`"
+        raise ConfiguredAdapterPermanentError(
+            f"Локальный файл для adapter `{adapter.adapter_name}` не найден: {candidate} "
+            f"(source={source})."
+        )
     return candidate
 
 
