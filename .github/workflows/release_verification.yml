@@ -38,3 +38,9 @@ jobs:
 
       - name: Mypy typecheck
         run: python -m mypy src/alpha_research
+
+      - name: Unit tests
+        run: python -m pytest tests/unit
+
+      - name: Release bundle verification
+        run: python ./scripts/verify_release_bundle.py --root .
