@@ -30,6 +30,28 @@ class ConfiguredAdapterPermanentError(ConfiguredAdapterError):
 
 
 @dataclass(frozen=True)
+class AdapterEnvironmentDiagnostics:
+    adapter_name: str
+    local_path_env: str | None
+    local_path_env_present: bool
+    api_key_env: str | None
+    api_key_env_present: bool
+    user_agent_env: str | None
+    user_agent_env_present: bool
+
+    def as_dict(self) -> dict[str, bool | str | None]:
+        return {
+            "adapter_name": self.adapter_name,
+            "local_path_env": self.local_path_env,
+            "local_path_env_present": self.local_path_env_present,
+            "api_key_env": self.api_key_env,
+            "api_key_env_present": self.api_key_env_present,
+            "user_agent_env": self.user_agent_env,
+            "user_agent_env_present": self.user_agent_env_present,
+        }
+
+
+@dataclass(frozen=True)
 class ResponseCache:
     root: Path
 
@@ -57,6 +79,18 @@ def resolve_env(name: str | None) -> str | None:
         return None
     value = os.environ.get(name)
     return value.strip() if isinstance(value, str) and value.strip() else None
+
+
+def adapter_environment_diagnostics(adapter: AdapterConfig) -> AdapterEnvironmentDiagnostics:
+    return AdapterEnvironmentDiagnostics(
+        adapter_name=adapter.adapter_name,
+        local_path_env=adapter.local_path_env,
+        local_path_env_present=resolve_env(adapter.local_path_env) is not None,
+        api_key_env=adapter.api_key_env,
+        api_key_env_present=resolve_env(adapter.api_key_env) is not None,
+        user_agent_env=adapter.user_agent_env,
+        user_agent_env_present=resolve_env(adapter.user_agent_env) is not None,
+    )
 
 
 def resolve_local_path(adapter: AdapterConfig, root: Path) -> Path:
